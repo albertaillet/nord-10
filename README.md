@@ -8,3 +8,4 @@
 - Wikipedia https://en.wikipedia.org/wiki/Nord-10
 - NDwiki http://www.ndwiki.org/wiki/Main_Page
   - Emulator http://www.ndwiki.org/wiki/Talk:ND100_emulator_project
+- datormuseum.se http://www.datormuseum.se/documentation-software/norsk-data-documentation.html
