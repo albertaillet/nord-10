@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 import argparse
 import csv
 import sys
@@ -9,7 +9,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     """Get arguments from command line."""
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file', type=Path)
-    parser.add_argument('-hi', '--instructions', type=Path)
+    parser.add_argument('-i', '--instructions', type=Path)
     parser.add_argument('-o', '--output', type=Path, default=Path('a.out'))
     args = parser.parse_args(argv)
     assert args.file.exists(), f'Source file {args.file} does not exist.'
