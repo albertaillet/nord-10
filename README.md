@@ -4,6 +4,19 @@
 
 ### ND-06.009.01 
 
+#### I.1.3.1 Register Block
+
+The CPU has 16 program levels, each level has the following 8 registers:
+
+- **0 STS**  *Status.* This register holds different status indicators.
+- **1 D** This register is an extension of the A register in double precision or floating point operations. It may also be connected to the A register during double length shifts.
+- **2 P** Program Counter, address of current instruction. This register is controlled automatically in the normal sequencing or branching mode.  But it is also fully program controlled and its contents may be transferred to or from other registers.
+- **3 B** Base register or second index register. In connection with indirect addressing, it causes pre-indexing.
+- **4 L** *Link register.* The return address after a subroutine jump is contained in this register.
+- **5 A** This is the main register for arithmetical and logical operations together with operands in memory. The register is also used for CPU controlled I/O communication.
+- **6 T** Temporary register. In floating point instructions it is used to hold the exponent part.
+- **7 X** Index register. In connection with indirect addressing, it causes post-indexing.
+
 #### II.3.3.2
 
 Generally, in memory reference instructions, 11 bits are used to specify the address of the desired word(s) in memory. Three address mode bits and an 8-bit signed displacement using 2's complement for negative numbers and sign extension (Excepted from this is the conditional jump, the byte, and the register block instructions).
@@ -28,11 +41,59 @@ Note that there is no addition in execution time for relative addressing, pre-in
 
 MEMORY REFERENCE INSTRUCTIONS
 ```
-┌────────────────────┬───┬───┬───┬───────────────────┐
-│      OP. CODE      │ X │ I │ B │  Displacement (Δ) │
-│ 15 │ 14 13 12  │ 11  10  9 │ 8 7 6 │ 5 4 3 │ 2 1 0 │     
-└────┴───────────┴───────────┴───────┴───────┴───────┘
+┌────────────────────┬───┬───┬───┬─────────────────────┐
+│      OP. CODE      │ X │ I │ B │   Displacement (Δ)  │
+│ 15 │ 14 13 12  │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
+└────┴───────────┴───────────┴─────────┴───────┴───────┘
 ```
+
+##### Store Instructions
+
+| Mnemonic | Opcode  | Description                 | Address Formula   |
+|----------|---------|-----------------------------|-------------------|
+| —        | 000000  | Address relative to P       | EL = P + Δ        |
+| ,X       | 002000  | Address relative to X       | EL = X + Δ        |
+| I        | 001000  | Indirect address            | EL = (P + Δ)      |
+| ,XI      | 003000  | Post-indexing               | EL = (P + Δ) + X  |
+| ,B       | 000400  | Address relative to B       | EL = B + Δ        |
+| ,X,B     | 002400  | Address relative to B and X | EL = B + Δ + X    |
+| I,B      | 001400  | Pre-indexing                | EL = (B + Δ)      |
+| ,XI,B    | 003400  | Pre- and Post-indexing      | EL = (B + Δ) + X  |
+
+Key:
+	•	P: Program Counter (PC)
+	•	X: Index register
+	•	B: Base register
+	•	I: Indirect addressing
+	•	Δ: Displacement value
+
+##### Store Instructions
+
+| Mnemonic | Opcode  | Description                       | Operation         |
+|----------|---------|-----------------------------------|-------------------|
+| STZ      | 000000  | Store zero                        | (EL): = 0         |
+| STA      | 004000  | Store A                           | (EL): = A         |
+| STT      | 010000  | Store T                           | (EL): = T         |
+| STX      | 014000  | Store X                           | (EL): = X         |
+| MIN      | 040000  | Memory increment and skip if zero | (EL): = (EL) + 1  |
+
+##### Load Instructions
+
+| Mnemonic | Opcode  | Description | Operation |
+|----------|---------|-------------|-----------|
+| LDA      | 044000  | Load A      | A: = (EL) |
+| LDT      | 040000  | Load T      | T: = (EL) |
+| LDX      | 054000  | Load X      | X: = (EL) |
+
+##### Arithmetical and Logical Instructions
+
+| Mnemonic | Opcode  | Description                                  | Operation     |
+|----------|---------|----------------------------------------------|---------------|
+| ADD      | 060000  | Add to A (C, O, and Q may be affected)       | A: = A + (EL) |
+| SUB      | 064000  | Subtract from A (C, O, and Q may be affected)| A: = A − (EL) |
+| AND      | 070000  | Logical AND to A                             | A: = A ∧ (EL) |
+| ORA      | 074000  | Logical inclusive OR to A                    | A: = A ∨ (EL) |
+| MPY      | 120000  | Multiply integer (O and Q may be affected)   | A: = A · (EL) |
 
 ## References
 
