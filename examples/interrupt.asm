@@ -1,3 +1,5 @@
+% Example from ND-06.009.01 I.2.6 
+% Interrupts and Interrupt Handling
 LDA (76032  % Enable for interrupts on level
 TRR PIE     % 1, 3, 4, 10, 11, 12, 13 and 14
 LDA (3736   % Enable for all internal
