@@ -24,8 +24,8 @@ binary,octal,code,type,description,reference
 1100010010000000,142200,LBYT,MEM,Load byte,III.2.1
 1101110000000000,156000,LRB,REGBLOCK,Load register block,III.2.2
 1101010100000010,152402,SRB,REGBLOCK,Store register block,III.2.2
-1101001100000000,151400,NLZ,FLOAT_CONV,Convert the number in A to a floating number in FA,III.2.3
-1101010000000000,152000,DNZ,FLOAT_CONV,Convert the floating number in FA to a fixed point number in A,III.2.3
+1101001100000000,151400,NLZ,CONV,Convert the number in A to a floating number in FA,III.2.3
+1101010000000000,152000,DNZ,CONV,Convert the floating number in FA to a fixed point number in A,III.2.3
 1111000100000000,170400,SAA,ARG,Set argument to A,III.2.4
 1111010100000000,172400,AAA,ARG,Add argument to A,III.2.4
 1111001100000000,171400,SAX,ARG,Set argument to X,III.2.4
