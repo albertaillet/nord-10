@@ -1,4 +1,4 @@
-binary,octal,code,type,description,reference
+binary,octal,mnemonic,category,description,reference
 0000000000000000,000000,STZ,MEM,Store zero,III.2.1
 0000100000000000,004000,STA,MEM,Store A,III.2.1
 0001000000000000,010000,STT,MEM,Store T,III.2.1
