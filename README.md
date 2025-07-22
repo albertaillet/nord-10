@@ -249,6 +249,49 @@ Argument is a signed number ranging from $-128$ to $127$.
 | CLD      | 000100 | Clear destination before operation | (dr) := 0                  |
 | CM1      | 000200 | Use one’s complement of source     | (sr) := (sr)̅               |
 
+##### Combined instructions
+
+| Mnemonic | Opcode  | Equivalent  | Description            |
+|----------|---------|-------------|------------------------|
+| EXIT     | 146142  | COPY SL, DP | Return from subroutine |
+| RCLR     | 146100  | COPY,       | Register clear         |
+| RINC     | 146400  | RADD AD1,   | Register increment     |
+| RCDR     | 146200  | RADD CM1,   | Register decrement     |
+
+#### Specify Source Register (sr):
+
+| Mnemonic | Opcode | Description          |
+|----------|--------|----------------------|
+| SD       | 000010 | D register as source |
+| SP       | 000020 | P register as source |
+| SB       | 000030 | B register as source |
+| SL       | 000040 | L register as source |
+| SA       | 000050 | A register as source |
+| ST       | 000060 | T register as source |
+| SX       | 000070 | X register as source |
+| —        | 000000 | Source value = 0     |
+
+#### Specify Destination Register (dr):
+
+| Mnemonic | Opcode | Description               |
+|----------|--------|---------------------------|
+| DD       | 000001 | D register as destination |
+| DP       | 000002 | P register as destination |
+| DB       | 000003 | B register as destination |
+| DL       | 000004 | L register as destination |
+| DA       | 000005 | A register as destination |
+| DT       | 000006 | T register as destination |
+| DX       | 000007 | X register as destination |
+
+#### Extended Arithmetic Operations
+
+| Mnemonic | Opcode | Description                                                                   | Operation         |
+|----------|--------|-------------------------------------------------------------------------------|-------------------|
+| RMPY     | 141200 | Multiply source with destination. Result in double accumulator.               | AD := (sr) × (dr) |
+| RDIV     | 141600 | Divide double accumulator with source register. Quotient in A, remainder in D | A := AD // (sr)   |
+
+(AD = A<sup>*</sup × (sr) + D)
+
 ## References
 
 - CERN documentation https://s3.cern.ch/inspire-prod-files-7/7d44720d4bab506c2032840f87e50689
