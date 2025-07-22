@@ -79,3 +79,15 @@ binary,octal,code,description,reference
 ,,SHR,Shift Right,ND-06.009.01 III.2.8
 1101000000000000,150000,TRA,Transfer specified register to A,ND-06.009.01 III.2.9
 1101000001000000,150100,TRR,Transfer specified register to R,ND-06.009.01 III.2.9
+1101000010000000,150200,MCL,Masked clear of specified register,ND-06.009.01 III.2.9
+1101000011000000,150300,MST,Masked set of specified register,ND-06.009.01 III.2.9
+1100000110000000,140600,EXR,Execute instruction found in specified register,ND-06.009.01 III.2.10
+1101011110000000,153600,IRR,Inter-register Read,ND-06.009.01 III.2.10
+1101011100000000,153400,IWR,Inter-register Write,ND-06.009.01 III.2.10
+1101000100000010,150402,ION,Turn on interrupt system,ND-06.009.01 III.2.11
+1101000100001000,150410,PON,Turn on paging system,ND-06.009.01 III.2.11
+1101000100000001,150401,IOF,Turn off interrupt system,ND-06.009.01 III.2.11
+1101000100000100,150404,POF,Turn off paging system,ND-06.009.01 III.2.11
+1101001000000000,151000,WAIT,Wait,ND-06.009.01 III.2.11
+1110100000000000,164000,IOX,Transfer data to/from specified device,ND-06.009.01 III.2.12
+1100011110000000,143600,IDENT,Transfer IDENT code of interrupting device with highest priority on level to A register,ND-06.009.01 III.2.13
