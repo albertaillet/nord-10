@@ -7,7 +7,7 @@ VALID_CATEGORIES = {'MEM','REGBLOCK','CONV','ARG','REG','BIT','JUMP','SHIFT','TR
 instructions_path = Path(__file__).parent / 'instructions.csv'
 with instructions_path.open() as f:
     f.readline()  # header
-    for binary, octal, mnemonic, category, _desc, _ref in csv.reader(f):
+    for binary, octal, mnemonic, category, _impl, _desc, _ref in csv.reader(f):
         assert mnemonic, f'Invalid {mnemonic=}'
         assert category in VALID_CATEGORIES, f'Invalid type {category=} for {mnemonic=}'
         if octal:
