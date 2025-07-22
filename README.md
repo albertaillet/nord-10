@@ -2,7 +2,7 @@
 
 ## Nord-10/S Documentation
 
-### ND-06.009.01 
+### ND-06.009.01
 
 #### I.1.3.1 Register Block
 
@@ -59,7 +59,7 @@ Note that there is no addition in execution time for relative addressing, pre-in
 | ,XI,B    | 003400  | Pre- and Post-indexing      | EL = (B + Δ) + X |
 
 Key:
--	P: Program Counter (PC)
+-	P: Program Counter
 -	X: Index register
 -	B: Base register
 -	I: Indirect addressing
@@ -191,6 +191,63 @@ Specified Level:
 | DNZ−20   | 152360  | Floating to integer conversion                                 |
 
 The range of scaling factor is $−128$ to $127$ which gives converting range from $10^{-39}$ to $10^{39}$.
+
+#### III.2.4 ARGUMENT INSTRUCTIONS
+
+```
+┌─────────────────────┬──────────┬─────────────────────┐
+│  1    1  1  1     0 │ Function │       Argument      │
+│ 15 │ 14 13 12  │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
+└────┴───────────┴───────────┴─────────┴───────┴───────┘
+```
+
+Function:
+
+| Mnemonic | Opcode | Description       | Operation    |
+|----------|--------|-------------------|--------------|
+| SAA      | 170400 | Set argument to A | A := ARG     |
+| AAA      | 172400 | Add argument to A | A := A + ARG |
+| SAX      | 171400 | Set argument to X | X := ARG     |
+| AAX      | 173400 | Add argument to X | X := X + ARG |
+| SAT      | 171000 | Set argument to T | T := ARG     |
+| AAT      | 173000 | Add argument to T | T := T + ARG |
+| SAB      | 170000 | Set argument to B | B := ARG     |
+| AAB      | 172000 | Add argument to B | B := B + ARG |
+
+Argument is a signed number ranging from $-128$ to $127$.
+
+#### III.2.5 REGISTER OPERATIONS
+
+```
+┌─────────────────────┬─────┬───┬───┬───┬───┬───────┬───────┐
+│  1    1  0  0     1 │ RAD │ C │ I │CM1│CLD│ Source│  Dest │
+│ 15 │ 14 13 12  │ 11    10   9 │ 8   7   6 │ 5 4 3 │ 2 1 0 │
+└────┴───────────┴──────────────┴───────────┴───────┴───────┘
+```
+
+##### Arithmetic Operations (RAD = 1):
+
+(C, O and Q may be affected by these instructions)
+
+| Mnemonic | Opcode  | Description                         | Operation           |
+|----------|---------|-------------------------------------|---------------------|
+| RADD     | 146000  | Add source to destination           | (dr) := (dr) + (sr) |
+| RSUB     | 146600  | Subtract source from destination    | (dr) := (dr) − (sr) |
+| COPY     | 146100  | Register transfer                   | (dr) := (sr)        |
+| AD1      | 000400  | Also add one to destination         | (dr) := (dr) + 1    |
+| ADC      | 001000  | Also add old carry to destination   | (dr) := (dr) + C    |
+
+##### Logical Operations (RAD = 0)
+
+| Mnemonic | Opcode | Description                        | Operation                  |
+|----------|--------|------------------------------------|----------------------------|
+| SWAP     | 144000 | Register exchange                  | (sr) := (dr), (dr) := (sr) |
+| RAND     | 144400 | Logical AND to destination         | (dr) := (dr) ∧ (sr)        |
+| REXO     | 145000 | Logical exclusive OR               | (dr) := (dr) ⊕ (sr)        |
+| RORA     | 145400 | Logical inclusive OR               | (dr) := (dr) ∨ (sr)        |
+|
+| CLD      | 000100 | Clear destination before operation | (dr) := 0                  |
+| CM1      | 000200 | Use one’s complement of source     | (sr) := (sr)̅               |
 
 ## References
 
