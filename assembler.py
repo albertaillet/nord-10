@@ -8,6 +8,9 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import NamedTuple
 
+DEFAULT_INSTRUCTIONS_PATH = Path(__file__).parent / 'instructions.csv'
+LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})\s+(?P<args>[^\s]+)?(\s*%\s*(?P<comment>.*))?$')
+
 
 def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
     """Parse the command line arguments to the script."""
@@ -21,10 +24,11 @@ def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
     assert args.instructions.suffix == '.csv', f'Instruction file {args.instructions} is not a csv.'
     return args
 
-DEFAULT_INSTRUCTIONS_PATH = Path(__file__).parent / 'instructions.csv'
-LINE_PATTERN = re.compile(
-    r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})\s+(?P<args>\w+)?(\s*%\s*(?P<comment>.*))?$',
-)
+
+class Category(Enum):
+    """Categories of instructions."""
+    MEM = auto(); REGBLOCK = auto(); CONV = auto(); ARG = auto(); REG = auto(); BIT = auto(); JUMP = auto(); 
+    SHIFT = auto(); TRANS = auto(); EXEC = auto(); INTER = auto(); SYS = auto(); WAIT = auto(); IO = auto(); IDENT = auto()
 
 
 class Instruction(NamedTuple):
@@ -33,36 +37,30 @@ class Instruction(NamedTuple):
     mnemonic: str
     args: str
     comment: str | None
+    binary: int
+    category: Category
 
 
-def tokenize(f: Iterable[str]) -> Iterator[Instruction]:
-    for i, line in enumerate(f, start=1):
+def tokenize(f: Iterable[str], instruction_info: dict[str, tuple[bytes, Category]]) -> Iterator[Instruction]:
+    i = 0
+    for line in f:
         if not line.strip() or line.lstrip().startswith('%'):
             continue  # empty line or comment
         m = LINE_PATTERN.match(line)
         if not m:
             raise ValueError(f'Line {i} not matched "{line}"')
+        i += 1
         label = m.group('label')
         mnemonic = m.group('mnemonic')
         args = m.group('args')
         comment = m.group('comment')
-        yield Instruction(i=i, label=label, mnemonic=mnemonic, args=args, comment=comment)
+        binary, category = instruction_info[mnemonic]
+        yield Instruction(
+            i=i, label=label, mnemonic=mnemonic, args=args, comment=comment, binary=binary, category=category
+        )
 
 
-class Category(Enum):
-    """Categories of instructions."""
-    MEM = auto()
-    REGBLOCK = auto()
-    CONV = auto()
-    ARG = auto()
-    REG = auto()
-    BIT = auto()
-    JUMP = auto()
-    SHIFT = auto()
-    TRANS = auto()
-
-
-def load_instruction_info(path: Path) -> dict[str, str]:
+def load_instruction_info(path: Path) -> dict[str, tuple[bytes, Category]]:
     """Load instructions from csv file."""
     instructions = {}
     with path.open() as f:
@@ -70,18 +68,53 @@ def load_instruction_info(path: Path) -> dict[str, str]:
         for binary, _octal, mnemonic, category, implemented, _desc, _ref in csv.reader(f):
             if not implemented:
                 continue
-            instructions[mnemonic] = binary, Category[category]
+            instructions[mnemonic] = int(binary, 2), Category[category]
     return instructions
+
+
+def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
+    labels = {}
+    for instruction in instructions:
+        if not instruction.label:
+            continue
+        if instruction.label in labels:
+            raise ValueError(f'Repeated label: {instruction.label} at {instruction.i}')
+        # NOTE: assumes that each line in the prorgam matches 16 bits, can be more.
+        labels[instruction.label] = instruction.i
+    return labels
+
+
+def pass2(instructions: Iterable[Instruction], labels: dict[str, int]) -> bytes:
+    program = bytearray()
+    for instruction in instructions:
+        print(instruction)
+    return bytes(program)
+
+
+def encode(instruction: Instruction, labels: dict[str, int]) -> bytes:
+    match instruction.category:
+        case Category.MEM:
+            return encode_mem(instruction, labels)
+        case Category.ARG:
+            return encode_arg(instruction, labels)
+        case _:
+            raise NotImplementedError(f'Category {instruction.category} is not implemented')
+
+
+def encode_mem(instruction: Instruction, labels: dict[str, int]) -> bytes:
+    pass
+
+
+def encode_arg(instruction: Instruction, labels: dict[str, int]) -> bytes:
+    pass
 
 
 def main(source_path: Path, instructions_path: Path, output_path: Path) -> None:
     instruction_info = load_instruction_info(instructions_path)
-    program = bytearray()
     with source_path.open() as f:
-        for instruction in tokenize(f):
-            binary, category = instruction_info[instruction.mnemonic]
-            print(f'Line {instruction} {binary=} {category=}')
-            # binary_instruction += TODO
+        labels = pass1(tokenize(f, instruction_info))
+        f.seek(0)
+        program = pass2(tokenize(f, instruction_info), labels)
     print(program)
     output_path.write_bytes(program)
 
