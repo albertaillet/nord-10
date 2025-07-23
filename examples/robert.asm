@@ -1,5 +1,5 @@
 	LDA	34
-yak	LDA	12
+yak	"abcdef
 	MPY	12
 	LDA	yak
 	LDA	yok

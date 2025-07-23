@@ -1,0 +1,8 @@
+	MPY	—
+	MPY	,X
+	MPY	I
+	MPY	,XI
+	MPY	,B
+	MPY	,X,B
+	MPY	I,B
+	MPY	,XI,B

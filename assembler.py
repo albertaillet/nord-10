@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 DEFAULT_INSTRUCTIONS_PATH = Path(__file__).parent / 'instructions.csv'
-LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})\s+(?P<args>[^\s]+)?(\s*%\s*(?P<comment>.*))?$')
+LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})?\s*(?P<args>[^\s]+)?(\s*%\s*(?P<comment>.*))?$')
 
 
 def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
@@ -27,17 +27,17 @@ def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
 
 class Category(Enum):
     """Categories of instructions."""
-    MEM = auto(); REGBLOCK = auto(); CONV = auto(); ARG = auto(); REG = auto(); BIT = auto(); JUMP = auto(); 
-    SHIFT = auto(); TRANS = auto(); EXEC = auto(); INTER = auto(); SYS = auto(); WAIT = auto(); IO = auto(); IDENT = auto()
+    MEM = auto(); REGBLOCK = auto(); CONV = auto(); ARG = auto(); REG = auto(); BIT = auto(); JUMP = auto(); SHIFT = auto()
+    TRANS = auto(); EXEC = auto(); INTER = auto(); SYS = auto(); WAIT = auto(); IO = auto(); IDENT = auto(); LITERAL = auto()
 
 
 class Instruction(NamedTuple):
     i: int
     label: str | None
-    mnemonic: str
+    mnemonic: str | None
     args: str | None
     comment: str | None
-    binary: int
+    binary: int | None
     category: Category
 
 
@@ -54,7 +54,7 @@ def tokenize(f: Iterable[str], instruction_info: dict[str, tuple[bytes, Category
         mnemonic = m.group('mnemonic')
         args = m.group('args')
         comment = m.group('comment')
-        binary, category = instruction_info[mnemonic]
+        binary, category = instruction_info.get(mnemonic, (None, Category.LITERAL))
         yield Instruction(
             i=i, label=label, mnemonic=mnemonic, args=args, comment=comment, binary=binary, category=category
         )
@@ -72,7 +72,7 @@ def load_op_info(path: Path) -> dict[str, tuple[bytes, Category]]:
 
 
 def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
-    """First pass to collect the labels -> addresses into the sumbol_table."""
+    """First pass to create {labels -> addresses} symbol_table."""
     symbol_table = {}
     for instr in instructions:
         if not instr.label:
@@ -85,7 +85,7 @@ def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
 
 
 def pass2(instructions: Iterable[Instruction], symbol_table: dict[str, int]) -> bytes:
-    """Second pass to """
+    """Second pass to construct program."""
     program = bytearray()
     for instr in instructions:
         print(instr)
@@ -99,6 +99,13 @@ def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
             return encode_mem(instr, symbol_table)
         case Category.ARG:
             return encode_arg(instr, symbol_table)
+        case Category.LITERAL:  # literals (not an instruction, can be multiple bytes)
+            args = instr.args
+            if args.isdigit():
+                return int(args).to_bytes(2)  # support up to 2^16
+            if args.startswith('"'):  # string literal
+                return args[1:].encode('ascii')
+            raise NotImplementedError('Unknown literal')
         case _:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
 
