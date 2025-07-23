@@ -108,8 +108,9 @@ def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
 # │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
-    # DRAFT: ignore arguments and just put in the op code
-    out = instr.binary
+    # DRAFT: this does not parse the displacement in any way
+    x, i, b = ',X' in instr.args, 'I' in instr.args, ',B' in instr.args
+    out = instr.binary | (x and 1 << 10) | (i and 1 << 9) | (b and 1 << 8)
     return out.to_bytes(2)
 
 
