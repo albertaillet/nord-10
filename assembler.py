@@ -87,8 +87,9 @@ def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
 def pass2(instructions: Iterable[Instruction], symbol_table: dict[str, int]) -> bytes:
     """Second pass to """
     program = bytearray()
-    for instruction in instructions:
-        print(instruction)
+    for instr in instructions:
+        print(instr)
+        program += encode(instr, symbol_table)
     return bytes(program)
 
 
@@ -102,12 +103,29 @@ def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
 
 
+# ┌───────────────────┬───┬───┬───┬─────────────────────┐
+# │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
+# │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
+# └────┴──────────┴───────────┴─────────┴───────┴───────┘
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
-    pass
+    # DRAFT: ignore arguments and just put in the op code
+    out = instr.binary
+    return out.to_bytes(2)
 
 
+# ┌────────────────────┬──────────┬─────────────────────┐
+# │  1    1  1  1    0 │ Function │       Argument      │
+# │ 15 │ 14 13 12 │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
+# └────┴──────────┴───────────┴─────────┴───────┴───────┘
 def encode_arg(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
-    pass
+    # DRAFT: ignore arguments and just put in the op code
+    out = instr.binary
+    return out.to_bytes(2)
+
+
+def print_program(program: bytes) -> None:
+    for i in range(0, len(program), 2):
+        print(f'{program[i]:08b}{program[i + 1]:08b}')
 
 
 def main(source_path: Path, instructions_path: Path, output_path: Path) -> None:
@@ -116,8 +134,8 @@ def main(source_path: Path, instructions_path: Path, output_path: Path) -> None:
         symbol_table = pass1(tokenize(f, op_info))
         f.seek(0)
         program = pass2(tokenize(f, op_info), symbol_table)
-    print(program)
     output_path.write_bytes(program)
+    print_program(program)
 
 
 if __name__ == '__main__':
