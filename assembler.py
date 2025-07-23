@@ -17,9 +17,11 @@ def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog='assembler', description='Assemble NORD-10 assembly code into binary.')
     parser.add_argument('file', type=Path, nargs='?', default=None, help='Assembly source file or "-" to read from stdin.')
     parser.add_argument('-i', '--instructions', type=Path, default=DEFAULT_INSTRUCTIONS_PATH)
-    parser.add_argument('-o', '--output', type=Path, default=Path('a.out'))
+    parser.add_argument('-o', '--output', type=Path, default=None)
+    parser.add_argument('-c', '--command', type=str, default=None, help='Program passed in as a string (terminates option list).')
     args = parser.parse_args(argv)
     assert args.file is None or args.file.exists(), f'Source file {args.file} does not exist.'
+    assert not (args.command and args.file), 'Use either a file or a command string.'
     assert args.instructions.exists(), f'Instruction file {args.instructions} does not exit.'
     assert args.instructions.suffix == '.csv', f'Instruction file {args.instructions} is not a csv.'
     return args
@@ -136,7 +138,7 @@ def print_program(program: bytes) -> None:
         print(f'{program[i]:08b}{program[i + 1]:08b}')
 
 
-def main(source_code: str, op_info: dict[str, tuple[int, Category]]) -> bytes:
+def assemble(source_code: str, op_info: dict[str, tuple[int, Category]]) -> bytes:
     source_lines = source_code.splitlines()
     symbol_table = pass1(tokenize(source_lines, op_info))
     return pass2(tokenize(source_lines, op_info), symbol_table)
@@ -152,9 +154,9 @@ def read_input_file(source_path: Path | None) -> str:
 
 if __name__ == '__main__':
     args = parse_command_line_args(sys.argv[1:])
-    source_code = read_input_file(args.file)
+    source_code = args.command or read_input_file(args.file)
     op_info = load_op_info(args.instructions)
-    program = main(source_code, op_info)
+    program = assemble(source_code, op_info)
     print_program(program)
     if args.output:
         args.output.write_bytes(program)
