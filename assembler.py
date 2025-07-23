@@ -35,7 +35,7 @@ class Instruction(NamedTuple):
     i: int
     label: str | None
     mnemonic: str
-    args: str
+    args: str | None
     comment: str | None
     binary: int
     category: Category
@@ -60,61 +60,62 @@ def tokenize(f: Iterable[str], instruction_info: dict[str, tuple[bytes, Category
         )
 
 
-def load_instruction_info(path: Path) -> dict[str, tuple[bytes, Category]]:
-    """Load instructions from csv file."""
-    instructions = {}
+def load_op_info(path: Path) -> dict[str, tuple[bytes, Category]]:
+    op_info = {}
     with path.open() as f:
         f.readline()
         for binary, _octal, mnemonic, category, implemented, _desc, _ref in csv.reader(f):
             if not implemented:
                 continue
-            instructions[mnemonic] = int(binary, 2), Category[category]
-    return instructions
+            op_info[mnemonic] = int(binary, 2), Category[category]
+    return op_info
 
 
 def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
-    labels = {}
-    for instruction in instructions:
-        if not instruction.label:
+    """First pass to collect the labels -> addresses into the sumbol_table."""
+    symbol_table = {}
+    for instr in instructions:
+        if not instr.label:
             continue
-        if instruction.label in labels:
-            raise ValueError(f'Repeated label: {instruction.label} at {instruction.i}')
-        # NOTE: assumes that each line in the prorgam matches 16 bits, can be more.
-        labels[instruction.label] = instruction.i
-    return labels
+        if instr.label in symbol_table:
+            raise ValueError(f'Repeated label: {instr.label} at {instr.i}')
+        # NOTE: assumes that each line in the assembly matches 16 bits in the program.
+        symbol_table[instr.label] = instr.i
+    return symbol_table
 
 
-def pass2(instructions: Iterable[Instruction], labels: dict[str, int]) -> bytes:
+def pass2(instructions: Iterable[Instruction], symbol_table: dict[str, int]) -> bytes:
+    """Second pass to """
     program = bytearray()
     for instruction in instructions:
         print(instruction)
     return bytes(program)
 
 
-def encode(instruction: Instruction, labels: dict[str, int]) -> bytes:
-    match instruction.category:
+def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
+    match instr.category:
         case Category.MEM:
-            return encode_mem(instruction, labels)
+            return encode_mem(instr, symbol_table)
         case Category.ARG:
-            return encode_arg(instruction, labels)
+            return encode_arg(instr, symbol_table)
         case _:
-            raise NotImplementedError(f'Category {instruction.category} is not implemented')
+            raise NotImplementedError(f'Category {instr.category} is not implemented')
 
 
-def encode_mem(instruction: Instruction, labels: dict[str, int]) -> bytes:
+def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     pass
 
 
-def encode_arg(instruction: Instruction, labels: dict[str, int]) -> bytes:
+def encode_arg(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     pass
 
 
 def main(source_path: Path, instructions_path: Path, output_path: Path) -> None:
-    instruction_info = load_instruction_info(instructions_path)
+    op_info = load_op_info(instructions_path)
     with source_path.open() as f:
-        labels = pass1(tokenize(f, instruction_info))
+        symbol_table = pass1(tokenize(f, op_info))
         f.seek(0)
-        program = pass2(tokenize(f, instruction_info), labels)
+        program = pass2(tokenize(f, op_info), symbol_table)
     print(program)
     output_path.write_bytes(program)
 
