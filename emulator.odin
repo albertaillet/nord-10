@@ -22,11 +22,13 @@ MPY_OP : u16 : 0o120000
 // │      OP. CODE      │ X │ I │ B │   Displacement (Δ)  │
 // │ 15 │ 14 13 12  │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 // └────┴───────────┴───────────┴─────────┴───────┴───────┘
-OP_MASK : u16 : 0b1111100000000000 // Operation code (first 5 bits)
-X_MASK  : u16 : 0b0000010000000000 // X-bit (post-index)
-I_MASK  : u16 : 0b0000001000000000 // I-bit (pre-index / indirection)
-B_MASK  : u16 : 0b0000000100000000 // B-bit (base-relative)
-Δ_MASK  : u16 : 0b0000000011111111 // Displacement mask (8 bits)
+MemoryInstruction :: bit_field u16 {
+    Δ: u8   | 8,
+    B: bool | 1,
+    I: bool | 1,
+    X: bool | 1,
+    OP: u8  | 5,  // NOTE: has to be shifted by 11 to be compared with OP
+}
 
 // CPU state
 CPU :: struct {
@@ -34,22 +36,22 @@ CPU :: struct {
 }
 
 // TODO: not fully implemented yet
-eff_addr :: proc(iw: u16, cpu: ^CPU, mem: []u16) -> u16 {
-    base := cpu.P if (iw & B_MASK) == 0 else cpu.B // Program counter
-    Δ := iw & Δ_MASK // TODO: Sign extension needed?
-    addr := base + Δ
-    if (iw & I_MASK) != 0 { addr = mem[addr] } // Indirect addressing
-    if (iw & X_MASK) != 0 { addr += cpu.X } // Post-indexing
+eff_addr :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> u16 {
+    addr := cpu.P if instr.B else cpu.B
+    addr = addr + u16(instr.Δ)  // Add displacement
+    if instr.I { addr = mem[addr] } // Indirect addressing
+    if instr.X { addr += cpu.X } // Post-indexing
     return addr
 }
 
 step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     iw  := mem[cpu.P]
-    cpu.P = (cpu.P + 1)
+    cpu.P += 1
 
-    op := iw & OP_MASK
-    el := eff_addr(iw, cpu, mem)
-
+    // For memory related instructions
+    instr := MemoryInstruction(iw)
+    el := eff_addr(instr, cpu, mem)
+    op := u16(instr.OP) << 11
     // TODO: implement more opcodes
     switch op {
     case STZ_OP:
@@ -61,9 +63,9 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     case STX_OP:
         mem[el] = cpu.X
     case MIN_OP:
-        mem[el] = (mem[el] + 1)
+        mem[el] += 1
         // skip next instruction if the result is zero
-        if mem[el] == 0 { cpu.P = (cpu.P + 1) }
+        if mem[el] == 0 { cpu.P += 1 }
     case LDA_OP:
         cpu.A = mem[el]
     case LDT_OP:
@@ -81,7 +83,7 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     case MPY_OP:
         cpu.A *= mem[el]
 	case:
-		fmt.printfln("Illegal opcode: %o at P = %o", iw, cpu.P - 1)
+		fmt.printfln("Illegal opcode: %b at P = %d", op, cpu.P - 1)
 		return false
     }
     return true
