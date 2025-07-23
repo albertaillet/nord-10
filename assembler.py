@@ -15,11 +15,11 @@ LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})?\s*(?P<a
 def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
     """Parse the command line arguments to the script."""
     parser = argparse.ArgumentParser(prog='assembler', description='Assemble NORD-10 assembly code into binary.')
-    parser.add_argument('file', type=Path)
+    parser.add_argument('file', type=Path, nargs='?', default=None, help='Assembly source file or "-" to read from stdin.')
     parser.add_argument('-i', '--instructions', type=Path, default=DEFAULT_INSTRUCTIONS_PATH)
     parser.add_argument('-o', '--output', type=Path, default=Path('a.out'))
     args = parser.parse_args(argv)
-    assert args.file.exists(), f'Source file {args.file} does not exist.'
+    assert args.file is None or args.file.exists(), f'Source file {args.file} does not exist.'
     assert args.instructions.exists(), f'Instruction file {args.instructions} does not exit.'
     assert args.instructions.suffix == '.csv', f'Instruction file {args.instructions} is not a csv.'
     return args
@@ -41,7 +41,7 @@ class Instruction(NamedTuple):
     category: Category
 
 
-def tokenize(f: Iterable[str], instruction_info: dict[str, tuple[bytes, Category]]) -> Iterator[Instruction]:
+def tokenize(f: Iterable[str], instruction_info: dict[str, tuple[int, Category]]) -> Iterator[Instruction]:
     i = 0
     for line in f:
         if not line.strip() or line.lstrip().startswith('%'):
@@ -60,7 +60,7 @@ def tokenize(f: Iterable[str], instruction_info: dict[str, tuple[bytes, Category
         )
 
 
-def load_op_info(path: Path) -> dict[str, tuple[bytes, Category]]:
+def load_op_info(path: Path) -> dict[str, tuple[int, Category]]:
     op_info = {}
     with path.open() as f:
         f.readline()
@@ -136,16 +136,25 @@ def print_program(program: bytes) -> None:
         print(f'{program[i]:08b}{program[i + 1]:08b}')
 
 
-def main(source_path: Path, instructions_path: Path, output_path: Path) -> None:
-    op_info = load_op_info(instructions_path)
-    with source_path.open() as f:
-        symbol_table = pass1(tokenize(f, op_info))
-        f.seek(0)
-        program = pass2(tokenize(f, op_info), symbol_table)
-    output_path.write_bytes(program)
-    print_program(program)
+def main(source_code: str, op_info: dict[str, tuple[int, Category]]) -> bytes:
+    source_lines = source_code.splitlines()
+    symbol_table = pass1(tokenize(source_lines, op_info))
+    return pass2(tokenize(source_lines, op_info), symbol_table)
+
+
+def read_input_file(source_path: Path | None) -> str:
+    if source_path is None:
+        if sys.stdin.isatty(): # Stdin is from a terminal (nothing piped), so fail gracefully
+            raise ValueError("No input file provided and no input received from stdin.")
+        return sys.stdin.read()
+    return source_path.read_text()
 
 
 if __name__ == '__main__':
     args = parse_command_line_args(sys.argv[1:])
-    main(args.file, args.instructions, args.output)
+    source_code = read_input_file(args.file)
+    op_info = load_op_info(args.instructions)
+    program = main(source_code, op_info)
+    print_program(program)
+    if args.output:
+        args.output.write_bytes(program)
