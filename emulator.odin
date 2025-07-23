@@ -4,19 +4,22 @@ import "core:fmt"
 
 // Instruction set for the Nord-10/S CPU
 MEMSIZE :: 64 * 1024
-STZ_OP : u16 : 0o000000
-STA_OP : u16 : 0o004000
-STT_OP : u16 : 0o010000
-STX_OP : u16 : 0o014000
-MIN_OP : u16 : 0o040000
-LDA_OP : u16 : 0o044000
-LDT_OP : u16 : 0o050000
-LDX_OP : u16 : 0o054000
-ADD_OP : u16 : 0o060000
-SUB_OP : u16 : 0o064000
-AND_OP : u16 : 0o070000
-ORA_OP : u16 : 0o074000
-MPY_OP : u16 : 0o120000
+Op :: enum u16 {
+    STZ = 0o000000,
+    STA = 0o004000,
+    STT = 0o010000,
+    STX = 0o014000,
+    MIN = 0o040000,
+    LDA = 0o044000,
+    LDT = 0o050000,
+    LDX = 0o054000,
+    ADD = 0o060000,
+    SUB = 0o064000,
+    AND = 0o070000,
+    ORA = 0o074000,
+    MPY = 0o120000,
+}
+
 
 // ┌────────────────────┬───┬───┬───┬─────────────────────┐
 // │      OP. CODE      │ X │ I │ B │   Displacement (Δ)  │
@@ -27,7 +30,7 @@ MemoryInstruction :: bit_field u16 {
     B: bool | 1,
     I: bool | 1,
     X: bool | 1,
-    OP: u8  | 5,  // NOTE: has to be shifted by 11 to be compared with OP
+    OP: u16 | 5,  // NOTE: has to be shifted by 11 to be compared with Op enum
 }
 
 // CPU state
@@ -51,39 +54,38 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     // For memory related instructions
     instr := MemoryInstruction(iw)
     el := eff_addr(instr, cpu, mem)
-    op := u16(instr.OP) << 11
-    // TODO: implement more opcodes
+    op := Op(instr.OP << 11)
     switch op {
-    case STZ_OP:
+    case .STZ:
         mem[el] = 0
-    case STA_OP:
+    case .STA:
         mem[el] = cpu.A
-    case STT_OP:
+    case .STT:
         mem[el] = cpu.T
-    case STX_OP:
+    case .STX:
         mem[el] = cpu.X
-    case MIN_OP:
+    case .MIN:
         mem[el] += 1
         // skip next instruction if the result is zero
         if mem[el] == 0 { cpu.P += 1 }
-    case LDA_OP:
+    case .LDA:
         cpu.A = mem[el]
-    case LDT_OP:
+    case .LDT:
         cpu.T = mem[el]
-    case LDX_OP:
+    case .LDX:
         cpu.X = mem[el]
-    case ADD_OP:
+    case .ADD:
         cpu.A += mem[el]
-    case SUB_OP:
+    case .SUB:
         cpu.A -= mem[el]
-    case AND_OP:
+    case .AND:
         cpu.A &= mem[el]
-    case ORA_OP:
+    case .ORA:
         cpu.A |= mem[el]
-    case MPY_OP:
+    case .MPY:
         cpu.A *= mem[el]
 	case:
-		fmt.printfln("Illegal opcode: %b at P = %d", op, cpu.P - 1)
+		fmt.printfln("Illegal opcode. %d at P = %d", op, cpu.P - 1)
 		return false
     }
     return true
@@ -91,9 +93,9 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
 
 // Hand assembled demo program
 demo_program :: proc(mem: []u16) {
-    mem[0o0000] = LDA_OP | 0o000406   // LDA COUNT,B
-    mem[0o0001] = MIN_OP | 0o000406   // MIN COUNT,B
-    mem[0o0002] = STA_OP | 0o000416   // STA VALUE,XI,B
+    mem[0o0000] = u16(Op.LDA) | 0o000406   // LDA COUNT,B
+    mem[0o0001] = u16(Op.MIN) | 0o000406   // MIN COUNT,B
+    mem[0o0002] = u16(Op.STA) | 0o000416   // STA VALUE,XI,B
     mem[0o0003] = 0o124001            // JMP 1  (not implemented – triggers error)
 }
 
