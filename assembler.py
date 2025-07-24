@@ -76,13 +76,14 @@ def load_op_info(path: Path) -> dict[str, tuple[int, Category]]:
 def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
     """First pass to create {labels -> addresses} symbol_table."""
     symbol_table = {}
+    adress = 0
     for instr in instructions:
         if not instr.label:
             continue
         if instr.label in symbol_table:
             raise ValueError(f'Repeated label: {instr.label} at {instr.i}')
-        # NOTE: assumes that each line in the assembly matches 16 bits in the program.
-        symbol_table[instr.label] = instr.i
+        symbol_table[instr.label] = adress
+        adress += instruction_length(instr)
     return symbol_table
 
 
@@ -96,16 +97,24 @@ def pass2(instructions: Iterable[Instruction], symbol_table: dict[str, int]) -> 
 
 def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     match instr.category:
-        case Category.MEM:
-            return encode_mem(instr, symbol_table)
-        case Category.ARG:
-            return encode_arg(instr, symbol_table)
-        case Category.LITERAL:  # literals (not an instruction, can be multiple bytes)
+        case Category.MEM: return encode_mem(instr, symbol_table)
+        case Category.ARG: return encode_arg(instr, symbol_table)
+        case Category.LITERAL:  # literals (not an instruction, can be multiple 16 bit values)
             args = instr.args
-            if args.isdigit():
-                return int(args).to_bytes(2)  # support up to 2^16
-            if args.startswith('"'):  # string literal
-                return args[1:].encode('ascii')
+            if args.isdigit(): return int(args).to_bytes(2)  # numeric literal # NOTE: supports up to 2^16
+            if args.startswith('"'): return args[1:].encode('ascii')  # string literal TODO: pad this to 16-bit (now it could be 8-bit)
+            raise NotImplementedError('Unknown literal')
+        case _:
+            raise NotImplementedError(f'Category {instr.category} is not implemented')
+
+
+def instruction_length(instr: Instruction) -> int:
+    match instr.category:
+        case (Category.MEM, Category.ARG): return 1
+        case Category.LITERAL:
+            args = instr.args
+            if args.isdigit(): return 1
+            if args.startswith('"'): return len(args[1:].encode('ascii')) // 2
             raise NotImplementedError('Unknown literal')
         case _:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
