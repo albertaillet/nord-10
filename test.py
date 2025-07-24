@@ -33,11 +33,13 @@ sources = [
 ('	ORA 1',     0b01111_000_00000001),
 ('	MPY 1',     0b10100_000_00000001),
 # Argument instructions
-('	SAA	-1',    0b11110_001_11111111),
 ('	SAA	-128',  0b11110_001_10000000),
+('	SAA	-9',    0b11110_001_11110111),
+('	SAA	-1',    0b11110_001_11111111),
+('	SAA	0',     0b11110_001_00000000),
 ('	SAA	1',     0b11110_001_00000001),
 ('	SAA	23',    0b11110_001_00010111),
-('	SAA	-9',    0b11110_001_11110111),
+('	SAA	127',   0b11110_001_01111111),
 ('	AAA	1',     0b11110_101_00000001),
 ('	SAX	1',     0b11110_011_00000001),
 ('	AAX	1',     0b11110_111_00000001),
@@ -45,6 +47,17 @@ sources = [
 ('	AAT	1',     0b11110_110_00000001),
 ('	SAB	1',     0b11110_000_00000001),
 ('	AAB	1',     0b11110_100_00000001),
+# String literals
+('	"ab',       0b1100001_01100010),
+('	"cern',     0b00110001_10110010_101110010_01101110),
+('	"CERN',     0b00100001_10100010_101010010_01001110),
+('	"NORD10',   0b01001110_01001111_01010010_01000100_00110001_00110000),
+# Numeric literals
+('	0',         0b0000_0000_0000_0000),
+('	1',         0b0000_0000_0000_0001),
+('	65535',     0b1111_1111_1111_1111),
+# ('	65536', 0),   # this raises too big to convert
+# ('	-1',    0),   # not supported
 ]
 
 
@@ -53,5 +66,6 @@ if __name__ == '__main__':
     for source, expected in sources:
         out = assemble(source, op_info)
         out_as_int = int.from_bytes(out, 'big')
-        assert out_as_int == expected, f'{out_as_int:0{len(out)*8}b} != {expected:016b} for "{source}"'
+        l = len(out)*8
+        assert out_as_int == expected, f"\n{out_as_int:0{l}b}\n!=\n{expected:0{l}b}\nfor '{source}'"
     print('All tests passed!')
