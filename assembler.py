@@ -124,7 +124,7 @@ def encode_signed_int(value: int, bits: int) -> int:
     """Encode a signed Python int into an unsigned two's-complement field."""
     max_value = 1 << (bits - 1)
     if not -max_value <= value < max_value:
-        raise ValueError(f"Value {value} out of range for {bits} bits ({-max_value}..{max_value})")
+        raise ValueError(f"Value {value} out of range for {bits} bits ({-max_value}..{max_value-1})")
     return value & ((1 << bits) - 1)
 
 # ┌───────────────────┬───┬───┬───┬─────────────────────┐
