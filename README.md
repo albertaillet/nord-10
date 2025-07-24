@@ -58,7 +58,9 @@ List of scanned documents available at datormuseum.se as of 21/07/2025
 
 ### Questions
 
-How it is possible that LDT and MIN has the same code?
+How it is possible that `LDT` and `MIN` has the same code (`040000`)?
+Same question for `SSO` and `SSQ` (`000040`)?
+I think it must be a typo and should be `LDT:040000` and `SSO:000050`.
 
 Why does Robert use XOR instead of OR to combine the different 16 bits to the instruction in the Livecode program?
 
