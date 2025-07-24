@@ -26,7 +26,7 @@ Op :: enum u16 {
 // │ 15 │ 14 13 12  │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 // └────┴───────────┴───────────┴─────────┴───────┴───────┘
 MemoryInstruction :: bit_field u16 {
-    Δ: u8   | 8,
+    Δ: i8   | 8,  // Signed - sign extended
     B: bool | 1,
     I: bool | 1,
     X: bool | 1,
@@ -41,7 +41,7 @@ CPU :: struct {
 // TODO: not fully implemented yet
 eff_addr :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> u16 {
     addr := cpu.P if instr.B else cpu.B
-    addr = addr + u16(instr.Δ)  // Add displacement
+    addr = u16(i16(addr) + i16(instr.Δ))  // Add displacement TODO: fix this to be correct
     if instr.I { addr = mem[addr] } // Indirect addressing
     if instr.X { addr += cpu.X } // Post-indexing
     return addr

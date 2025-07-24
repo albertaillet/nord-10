@@ -120,20 +120,26 @@ def instruction_length(instr: Instruction) -> int:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
 
 
+def encode_signed_int(value: int, bits: int) -> int:
+    """Encode a signed Python int into an unsigned two's-complement field."""
+    max_value = 1 << (bits - 1)
+    if not -max_value <= value < max_value:
+        raise ValueError(f"Value {value} out of range for {bits} bits ({-max_value}..{max_value})")
+    return value & ((1 << bits) - 1)
+
 # ┌───────────────────┬───┬───┬───┬─────────────────────┐
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
 # │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
-MEM_ARGS_PATTERN = re.compile(r'^(?P<displacement>-?[\d]+)?(?P<adressing_mode>[,XIB]*)?$')
+MEM_ARGS_PATTERN = re.compile(r'^(?P<delta>-?[\d]+)?(?P<adressing_mode>[,XIB]*)?$')
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
-    # DRAFT: this does not parse the displacement in any way
-    displacement, x, i, b = 0, 0, 0, 0
+    x, i, b, Δ = 0, 0, 0, 0
     m = MEM_ARGS_PATTERN.match(instr.args)
     if m:
         am = m.group('adressing_mode') or ''
         x, i, b = ',X' in am, 'I' in am, ',B' in am
-        displacement = int(m.group('displacement') or 0)  # TODO: this is not correct
-    return (instr.binary | (x << 10) | (i << 9) | (b << 8) | displacement).to_bytes(2)
+        Δ = encode_signed_int(int(m.group('delta') or 0), 8)
+    return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2)
 
 
 # ┌────────────────────┬──────────┬─────────────────────┐
