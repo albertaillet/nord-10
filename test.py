@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-from subprocess import run
-
 from assembler import DEFAULT_INSTRUCTIONS_PATH, assemble, load_op_info
-
-
-def test_assembler_subprocess(input_asm: str) -> str:
-    """Test the assembler CLI with the provided assembly code."""
-    process = run(['./assembler.py', '--command', input_asm], capture_output=True, text=True)
-    return process.stdout + process.stderr
 
 
 def as16bit(num: int) -> str:
