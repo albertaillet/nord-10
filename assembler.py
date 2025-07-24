@@ -101,7 +101,7 @@ def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
         case Category.ARG: return encode_arg(instr)
         case Category.LITERAL:  # literals (not an instruction, can be multiple 16 bit values)
             args = instr.args
-            if args.isdigit(): return int(args).to_bytes(2)  # numeric literal # NOTE: supports up to 2^16
+            if args.isdigit(): return int(args).to_bytes(2, 'big')  # numeric literal # NOTE: supports up to 2^16
             if args.startswith('"'): return args[1:].encode('ascii')  # string literal TODO: pad this to 16-bit (now it could be 8-bit)
             raise NotImplementedError('Unknown literal')
         case _:
@@ -112,20 +112,16 @@ def instruction_length(instr: Instruction) -> int:
     match instr.category:
         case Category.MEM | Category.ARG: return 1
         case Category.LITERAL:
-            args = instr.args
-            if args.isdigit(): return 1
-            if args.startswith('"'): return len(args[1:].encode('ascii')) // 2
+            if instr.args.isdigit(): return 1
+            if instr.args.startswith('"'): return len(instr.args[1:].encode('ascii')) // 2
             raise NotImplementedError('Unknown literal')
         case _:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
 
 
-def encode_signed_int(value: int, bits: int) -> int:
-    """Encode a signed Python int into an unsigned two's-complement field."""
-    max_value = 1 << (bits - 1)
-    if not -max_value <= value < max_value:
-        raise ValueError(f"Value {value} out of range for {bits} bits ({-max_value}..{max_value-1})")
-    return value & ((1 << bits) - 1)
+def encode_signed_int8(value: int) -> int:
+    """Encode a signed int to bytes and back: x -> x if x > 0 else x -> 256 - x (-128 < x < 127)."""
+    return int.from_bytes(value.to_bytes(1, 'big', signed=True))
 
 # ┌───────────────────┬───┬───┬───┬─────────────────────┐
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
@@ -139,8 +135,8 @@ def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     if m:
         am = m.group('adressing_mode') or ''
         x, i, b = ',X' in am, 'I' in am, ',B' in am
-        Δ = encode_signed_int(int(m.group('delta') or 0), 8)
-    return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2)
+        Δ = encode_signed_int8(int(m.group('delta') or 0))
+    return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2, 'big')
 
 
 # ┌────────────────────┬──────────┬─────────────────────┐
@@ -148,8 +144,8 @@ def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
 # │ 15 │ 14 13 12 │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
 def encode_arg(instr: Instruction) -> bytes:
-    argument = encode_signed_int(int(instr.args or 0), 8)
-    return (instr.binary | argument).to_bytes(2)
+    argument = encode_signed_int8(int(instr.args or 0))
+    return (instr.binary | argument).to_bytes(2, 'big')
 
 
 def print_program(program: bytes) -> None:
