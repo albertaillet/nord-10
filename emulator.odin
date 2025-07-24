@@ -19,6 +19,8 @@ Op :: enum u16 {
     AND = 0o070000,
     ORA = 0o074000,
     MPY = 0o120000,
+    JMP = 0o124000,
+    JPL = 0o134000,
 }
 
 
@@ -64,36 +66,23 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     el := eff_addr(instr, cpu, mem)
     op := Op(instr.OP << 11)
     switch op {
-    case .STZ:
-        mem[el] = 0
-    case .STA:
-        mem[el] = cpu.A
-    case .STT:
-        mem[el] = cpu.T
-    case .STX:
-        mem[el] = cpu.X
-    case .MIN:
-        mem[el] += 1
-        // skip next instruction if the result is zero
-        if mem[el] == 0 { cpu.P += 1 }
-    case .LDA:
-        cpu.A = mem[el]
-    case .LDT:
-        cpu.T = mem[el]
-    case .LDX:
-        cpu.X = mem[el]
-    case .ADD:
-        cpu.A += mem[el]
-    case .SUB:
-        cpu.A -= mem[el]
-    case .AND:
-        cpu.A &= mem[el]
-    case .ORA:
-        cpu.A |= mem[el]
-    case .MPY:
-        cpu.A *= mem[el]
+    case .STZ: mem[el] = 0
+    case .STA: mem[el] = cpu.A
+    case .STT: mem[el] = cpu.T
+    case .STX: mem[el] = cpu.X
+    case .MIN: mem[el] += 1; if mem[el] == 0 { cpu.P += 1 }
+    case .LDA: cpu.A = mem[el]
+    case .LDT: cpu.T = mem[el]
+    case .LDX: cpu.X = mem[el]
+    case .ADD: cpu.A += mem[el]
+    case .SUB: cpu.A -= mem[el]
+    case .AND: cpu.A &= mem[el]
+    case .ORA: cpu.A |= mem[el]
+    case .MPY: cpu.A *= mem[el]
+    case .JMP: cpu.P = el
+    case .JPL: cpu.L = cpu.P; cpu.P = el
 	case:
-		fmt.printfln("Illegal opcode. %d at P = %d", op, cpu.P - 1)
+		fmt.printfln("Illegal opcode. %d at P = %d", op, cpu.P)
 		return false
     }
     cpu.P += 1
@@ -102,15 +91,15 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
 
 // Hand assembled demo program
 demo_program :: proc(mem: []u16) {
-    mem[0o0000] = u16(Op.LDA) | 0o000406   // LDA COUNT,B
-    mem[0o0001] = u16(Op.MIN) | 0o000406   // MIN COUNT,B
-    mem[0o0002] = u16(Op.STA) | 0o000416   // STA VALUE,XI,B
-    mem[0o0003] = 0o124001            // JMP 1  (not implemented – triggers error)
+    mem[0o0000] = u16(Op.LDA) | 0o000406  // LDA COUNT,B
+    mem[0o0001] = u16(Op.MIN) | 0o000406  // MIN COUNT,B
+    mem[0o0002] = u16(Op.STA) | 0o000416  // STA VALUE,XI,B
+    mem[0o0003] = 0o130001  // JAP 1  (not implemented – triggers error)
 }
 
 main :: proc() {
     memory_data : [MEMSIZE]u16
-    memory := memory_data[:]     // convert to slice
+    memory := memory_data[:]  // convert to slice
 
     cpu := CPU{P = 0, A = 0, T = 0, X = 0, B = 0}
 
