@@ -2,8 +2,9 @@ package main
 
 import "core:fmt"
 
+MEMSIZE :: 1 << 16
+
 // Instruction set for the Nord-10/S CPU
-MEMSIZE :: 64 * 1024
 Op :: enum u16 {
     STZ = 0o000000,
     STA = 0o004000,
@@ -49,7 +50,7 @@ CPU :: struct {
 
 // TODO: not fully implemented yet
 eff_addr :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> u16 {
-    addr := cpu.P if instr.B else cpu.B
+    addr := cpu.B if instr.B else cpu.P
     addr = u16(i16(addr) + i16(instr.Δ))  // Add displacement TODO: fix this to be correct
     if instr.I { addr = mem[addr] } // Indirect addressing
     if instr.X { addr += cpu.X } // Post-indexing
@@ -58,8 +59,6 @@ eff_addr :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> u16 {
 
 step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     iw  := mem[cpu.P]
-    cpu.P += 1
-
     // For memory related instructions
     instr := MemoryInstruction(iw)
     el := eff_addr(instr, cpu, mem)
@@ -97,6 +96,7 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
 		fmt.printfln("Illegal opcode. %d at P = %d", op, cpu.P - 1)
 		return false
     }
+    cpu.P += 1
     return true
 }
 
