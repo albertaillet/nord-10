@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 DEFAULT_INSTRUCTIONS_PATH = Path(__file__).parent / 'instructions.csv'
-LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})?\s*(?P<args>[^\s]+)?(\s*%\s*(?P<comment>.*))?$')
+LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})?\s*(?P<args>[^\s^%]+)\s*(?:%\s*(?P<comment>.*))?$')
 
 
 def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
@@ -90,7 +90,6 @@ def pass2(instructions: Iterable[Instruction], symbol_table: dict[str, int]) -> 
     """Second pass to construct program."""
     program = bytearray()
     for instr in instructions:
-        print(instr)
         program += encode(instr, symbol_table)
     return bytes(program)
 
@@ -116,11 +115,16 @@ def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
 # │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
+MEM_ARGS_PATTERN = re.compile(r'^(?P<displacement>-?[\d]+)?(?P<adressing_mode>[,XIB]*)?$')
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     # DRAFT: this does not parse the displacement in any way
-    x, i, b = ',X' in instr.args, 'I' in instr.args, ',B' in instr.args
-    out = instr.binary | (x and 1 << 10) | (i and 1 << 9) | (b and 1 << 8)
-    return out.to_bytes(2)
+    displacement, x, i, b = 0, 0, 0, 0
+    m = MEM_ARGS_PATTERN.match(instr.args)
+    if m:
+        am = m.group('adressing_mode') or ''
+        x, i, b = ',X' in am, 'I' in am, ',B' in am
+        displacement = int(m.group('displacement') or 0)  # TODO: this is not correct
+    return (instr.binary | (x << 10) | (i << 9) | (b << 8) | displacement).to_bytes(2)
 
 
 # ┌────────────────────┬──────────┬─────────────────────┐
