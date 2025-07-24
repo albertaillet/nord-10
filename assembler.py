@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 DEFAULT_INSTRUCTIONS_PATH = Path(__file__).parent / 'instructions.csv'
-LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s+(?P<mnemonic>[A-Z]{3,4})?\s*(?P<args>[^\s^%]+)\s*(?:%\s*(?P<comment>.*))?$')
+LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s*(?P<mnemonic>[A-Z]{3,4})?\s*(?P<args>[^\s^%]+)?\s*(?:%\s*(?P<comment>.*))?$')
 
 
 def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
@@ -22,7 +22,7 @@ def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
     args = parser.parse_args(argv)
     assert args.file is None or args.file.exists(), f'Source file {args.file} does not exist.'
     assert not (args.command and args.file), 'Use either a file or a command string.'
-    assert args.instructions.exists(), f'Instruction file {args.instructions} does not exit.'
+    assert args.instructions.exists(), f'Instruction file {args.instructions} does not exist.'
     assert args.instructions.suffix == '.csv', f'Instruction file {args.instructions} is not a csv.'
     return args
 
@@ -76,14 +76,13 @@ def load_op_info(path: Path) -> dict[str, tuple[int, Category]]:
 def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
     """First pass to create {labels -> addresses} symbol_table."""
     symbol_table = {}
-    adress = 0
+    address = 0
     for instr in instructions:
-        if not instr.label:
-            continue
-        if instr.label in symbol_table:
-            raise ValueError(f'Repeated label: {instr.label} at {instr.i}')
-        symbol_table[instr.label] = adress
-        adress += instruction_length(instr)
+        if instr.label:
+            if instr.label in symbol_table:
+                raise ValueError(f'Repeated label: {instr.label} at {instr.i}')
+            symbol_table[instr.label] = address
+        address += instruction_length(instr)
     return symbol_table
 
 
@@ -127,13 +126,13 @@ def encode_signed_int8(value: int) -> int:
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
 # │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
-MEM_PATTERN = re.compile(r'^(?P<delta>-?[\d]+)?(?P<adressing_mode>[,XIB]*)?$')
+MEM_PATTERN = re.compile(r'^(?P<delta>-?[\d]+)?(?P<addressing_mode>[,XIB]*)?$')
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     # TODO: make labels work
     x, i, b, Δ = 0, 0, 0, 0
     m = MEM_PATTERN.match(instr.args)
     if m:
-        am = m.group('adressing_mode') or ''
+        am = m.group('addressing_mode') or ''
         x, i, b = ',X' in am, 'I' in am, ',B' in am
         Δ = encode_signed_int8(int(m.group('delta') or 0))
     return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2, 'big')
