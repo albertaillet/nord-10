@@ -26,11 +26,20 @@ Op :: enum u16 {
 // │ 15 │ 14 13 12  │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 // └────┴───────────┴───────────┴─────────┴───────┴───────┘
 MemoryInstruction :: bit_field u16 {
-    Δ: i8   | 8,  // Signed - sign extended
+    Δ: i8   | 8,  // Sign extended
     B: bool | 1,
     I: bool | 1,
     X: bool | 1,
     OP: u16 | 5,  // NOTE: has to be shifted by 11 to be compared with Op enum
+}
+
+// ┌────────────────────┬──────────┬─────────────────────┐
+// │  1    1  1  1    0 │ Function │       Argument      │
+// │ 15 │ 14 13 12 │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
+// └────┴──────────┴───────────┴─────────┴───────┴───────┘
+ArgumentInstruction :: bit_field u16 {
+    arg: i8 | 8,  // Sign extended
+    OP: u16 | 8,  // NOTE: has to be shifted by 8 to be compared with Op enum
 }
 
 // CPU state

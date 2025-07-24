@@ -98,7 +98,7 @@ def pass2(instructions: Iterable[Instruction], symbol_table: dict[str, int]) -> 
 def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     match instr.category:
         case Category.MEM: return encode_mem(instr, symbol_table)
-        case Category.ARG: return encode_arg(instr, symbol_table)
+        case Category.ARG: return encode_arg(instr)
         case Category.LITERAL:  # literals (not an instruction, can be multiple 16 bit values)
             args = instr.args
             if args.isdigit(): return int(args).to_bytes(2)  # numeric literal # NOTE: supports up to 2^16
@@ -131,10 +131,11 @@ def encode_signed_int(value: int, bits: int) -> int:
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
 # │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
-MEM_ARGS_PATTERN = re.compile(r'^(?P<delta>-?[\d]+)?(?P<adressing_mode>[,XIB]*)?$')
+MEM_PATTERN = re.compile(r'^(?P<delta>-?[\d]+)?(?P<adressing_mode>[,XIB]*)?$')
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
+    # TODO: make labels work
     x, i, b, Δ = 0, 0, 0, 0
-    m = MEM_ARGS_PATTERN.match(instr.args)
+    m = MEM_PATTERN.match(instr.args)
     if m:
         am = m.group('adressing_mode') or ''
         x, i, b = ',X' in am, 'I' in am, ',B' in am
@@ -146,10 +147,9 @@ def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
 # │  1    1  1  1    0 │ Function │       Argument      │
 # │ 15 │ 14 13 12 │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
-def encode_arg(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
-    # DRAFT: ignore arguments and just put in the op code
-    out = instr.binary
-    return out.to_bytes(2)
+def encode_arg(instr: Instruction) -> bytes:
+    argument = encode_signed_int(int(instr.args or 0), 8)
+    return (instr.binary | argument).to_bytes(2)
 
 
 def print_program(program: bytes) -> None:

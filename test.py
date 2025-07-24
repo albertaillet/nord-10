@@ -2,6 +2,7 @@
 from assembler import DEFAULT_INSTRUCTIONS_PATH, assemble, load_op_info
 
 sources = [
+# Memory instructions
 ('	MPY	—',     0b10100_000_00000000),
 ('	MPY	,X',    0b10100_100_00000000),
 ('	MPY	I',     0b10100_010_00000000),
@@ -18,6 +19,12 @@ sources = [
 ('	MPY	1,XI',  0b10100_110_00000001),
 ('	MPY	23,XI', 0b10100_110_00010111),
 ('	MPY	-9,XI', 0b10100_110_11110111),
+# Argument instructions
+('	SAA	-1',    0b11110_001_11111111),
+('	SAA	-128',  0b11110_001_10000000),
+('	SAA	1',     0b11110_001_00000001),
+('	SAA	23',    0b11110_001_00010111),
+('	SAA	-9',    0b11110_001_11110111),
 ]
 
 
@@ -26,4 +33,4 @@ if __name__ == '__main__':
     for source, expected in sources:
         out = assemble(source, op_info)
         out_as_int = int.from_bytes(out, 'big')
-        assert out_as_int == expected, f'{out_as_int:0{len(out)*8}b} != {expected:016b}'
+        assert out_as_int == expected, f'{out_as_int:0{len(out)*8}b} != {expected:016b} for "{source}"'
