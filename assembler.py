@@ -110,7 +110,7 @@ def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
 
 def instruction_length(instr: Instruction) -> int:
     match instr.category:
-        case (Category.MEM, Category.ARG): return 1
+        case Category.MEM | Category.ARG: return 1
         case Category.LITERAL:
             args = instr.args
             if args.isdigit(): return 1
