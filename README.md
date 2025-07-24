@@ -6,6 +6,26 @@ This repository contains documentation and code for an assembler and an emulator
 
 [ND-06.009.01.md](./ND-06.009.01.md) contains a markdown formatted version of parts of the NORD-10/S Functional Description (See references).
 
+## Usage:
+
+Clone the repo and cd into the folder:
+```sh
+git clone https://github.com/albertaillet/nord-10
+cd nord-10
+```
+The assembler is written in Python (version 3.13.5 for development, version 3.10 or higher should work).
+```sh
+./assembler.py --help
+```
+The emulator is written in the [Odin](https://odin-lang.org/) programming language. 
+```sh
+odin run emulator.odin -file
+```
+The tests for the assembler are written in Python and can be run with
+```sh
+./test.py
+```
+
 ## References
 
 - At CERN https://s3.cern.ch/inspire-prod-files-7/7d44720d4bab506c2032840f87e50689
@@ -33,3 +53,15 @@ List of scanned documents available at datormuseum.se as of 21/07/2025
 | [ND-30.004.02](http://storage.datormuseum.se/u/96935524/Datormusuem/ND10/Manuals/ND-30.004.02_NORD-10_S_Hardware_Maintenance_Manual.pdf) | NORD-10/S Hardware Maintenance Manual |
 | [ND-60.044.01](http://storage.datormuseum.se/u/96935524/Datormusuem/ND10/Manuals/ND-60.044.01-SINTRAN-II-OPERATORS-GUIDE.pdf)            | SINTRAN II OPERATOR'S GUIDE           |
 | [ND-12.008.01](http://storage.datormuseum.se/u/96935524/Datormusuem/ND10/Manuals/ND-12.008.01_NORD_10_HP_7970_Mag_Tape_Interface.pdf)    | NORD 10/HP 7970 Mag Tape interace     |
+
+## Worklog / Notes
+
+### Questions
+
+How it is possible that LDT and MIN has the same code?
+
+Why does Robert use XOR instead of OR to combine the different 16 bits to the instruction in the Livecode program?
+
+### Notes for later
+
+See USE OF THE PVL REGISTER to get an example of how to use `,X`
