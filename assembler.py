@@ -126,14 +126,13 @@ def encode_signed_int8(value: int) -> int:
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
 # │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
-MEM_PATTERN = re.compile(r'^(?P<delta>-?[\d]+)?(?P<addressing_mode>[,XIB]*)?$')
+MEM_PATTERN = re.compile(r'^(?P<delta>-?\d+)?(?P<X>,X)?(?P<I>I)?(?P<B>,B)?$')
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     # TODO: make labels work
     x, i, b, Δ = 0, 0, 0, 0
     m = MEM_PATTERN.match(instr.args)
     if m:
-        am = m.group('addressing_mode') or ''
-        x, i, b = ',X' in am, 'I' in am, ',B' in am
+        x, i, b = bool(m.group('X')), bool(m.group('I')), bool(bool(m.group('B')))
         Δ = encode_signed_int8(int(m.group('delta') or 0))
     return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2, 'big')
 
