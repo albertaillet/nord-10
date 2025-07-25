@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-from assembler import DEFAULT_INSTRUCTIONS_PATH, assemble, load_op_info
+import csv
+
+from assembler import DEFAULT_INSTRUCTIONS_PATH, Category, assemble, load_op_info
+
+
+def test_instructions_csv():
+    with DEFAULT_INSTRUCTIONS_PATH.open() as f:
+        f.readline()  # skip header
+        for binary, octal, mnemonic, category, _impl, _desc, _ref in csv.reader(f):
+            assert mnemonic, f'Invalid {mnemonic=}'
+            assert Category[category], f'Invalid {category=} for {mnemonic=}'
+            if octal:
+                assert int(octal, 8) < 2**16, f'Instruction {octal=} exceeds 16 bits.'
+                assert len(octal) == 6, f'Invalid {octal=} for {mnemonic=}'
+            if binary:
+                assert len(binary) == 16, f'Invalid {binary=} for {mnemonic=}'
+                assert int(octal, 8) == int(binary, 2), f'Mismatch between {octal=} and {binary=} for {mnemonic=}'
 
 sources = [
 # Memory instructions
@@ -66,6 +82,7 @@ sources = [
 
 
 if __name__ == '__main__':
+    test_instructions_csv()
     op_info = load_op_info(DEFAULT_INSTRUCTIONS_PATH)
     for source, expected in sources:
         out = assemble(source, op_info)
@@ -73,3 +90,4 @@ if __name__ == '__main__':
         l = len(out)*8
         assert out_as_int == expected, f"\n{out_as_int:0{l}b}\n!=\n{expected:0{l}b}\nfor '{source}'"
     print('All tests passed!')
+
