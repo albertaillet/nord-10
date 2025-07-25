@@ -128,10 +128,10 @@ def encode_signed_int8(value: int) -> int:
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
 MEM_PATTERN = re.compile(r'^(?:(?P<delta>-?\d*)|(?P<label>\w+))(?P<X>,X)?(?P<I> ?I)?(?P<B>,B)?$')
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
-    m = MEM_PATTERN.match(instr.args)
-    Δ, x, i, b = 0, bool(m.group('X')), bool(m.group('I')), bool(m.group('B'))
-    if (delta := m.group('delta')): Δ = encode_signed_int8(0 if delta == '-' else int(delta))
-    if (label := m.group('label')): Δ = encode_signed_int8(symbol_table[label] - instr.address)
+    m = MEM_PATTERN.match(instr.args).groupdict()
+    Δ, x, i, b = 0, bool(m['X']), bool(m['I']), bool(m['B'])
+    if (delta := m['delta']): Δ = encode_signed_int8(0 if delta == '-' else int(delta))
+    if (label := m['label']): Δ = encode_signed_int8(symbol_table[label] - instr.address)
     return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2, 'big')
 
 
@@ -152,6 +152,7 @@ def print_program(program: bytes) -> None:
 def assemble(source_code: str, op_info: dict[str, tuple[int, Category]]) -> bytes:
     source_lines = source_code.splitlines()
     tokens = list(tokenize(source_lines, op_info))
+    # print(*tokens, sep='\n')
     symbol_table = pass1(tokens)
     return pass2(tokens, symbol_table)
 
