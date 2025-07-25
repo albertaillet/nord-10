@@ -5,7 +5,7 @@ import "core:fmt"
 MEMSIZE :: 1 << 16
 
 // Instruction set for the Nord-10/S CPU
-Op :: enum u16 {
+MemoryOp :: enum u16 {
     STZ = 0o000000,
     STA = 0o004000,
     STT = 0o010000,
@@ -19,8 +19,24 @@ Op :: enum u16 {
     AND = 0o070000,
     ORA = 0o074000,
     MPY = 0o120000,
+    // Unconditional jumps (MEM format)
     JMP = 0o124000,
     JPL = 0o134000,
+}
+ArgumentOp :: enum u16 {
+    SAA = 0o170400, AAA = 0o172400,
+    SAX = 0o171400, AAX = 0o173400,
+    SAT = 0o171000, AAT = 0o173000,
+    SAB = 0o170000, AAB = 0o172000,
+}
+ConditionalJumpOp :: enum u16 {
+    JAP = 0o130000,
+    JAN = 0o130400,
+    JAZ = 0o131000,
+    JAF = 0o131400,
+    JXN = 0o133400,
+    JPC = 0o132000,
+    JNC = 0o132400,
 }
 
 
@@ -45,6 +61,15 @@ ArgumentInstruction :: bit_field u16 {
     OP: u16 | 8,  // NOTE: has to be shifted by 8 to be compared with Op enum
 }
 
+// ┌────────────────────┬───────────┬────────────────────┐
+// │  1    0  1  1    0 │ Condition │  Displacement (Δ)  │
+// │ 15 │ 14 13 12 │ 11  10  9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
+// └────┴──────────┴───────────┴─────────┴───────┴───────┘
+ConditionalJumpInstruction :: bit_field u16 {
+    Δ  : i8  | 8,  // Sign extended
+    OP : u16 | 8,  // NOTE: has to be shifted by 8 to be compared with Op enum
+}
+
 // CPU state
 CPU :: struct {
     STS, D, P, B, L, A, T, X : u16
@@ -53,18 +78,15 @@ CPU :: struct {
 // TODO: not fully implemented yet
 eff_addr :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> u16 {
     addr := cpu.B if instr.B else cpu.P
-    addr = u16(i16(addr) + i16(instr.Δ))  // Add displacement TODO: fix this to be correct
+    addr += u16(instr.Δ)  // Add displacement TODO: fix so negation works
     if instr.I { addr = mem[addr] } // Indirect addressing
     if instr.X { addr += cpu.X } // Post-indexing
     return addr
 }
 
-step :: proc(cpu: ^CPU, mem: []u16) -> bool {
-    iw  := mem[cpu.P]
-    // For memory related instructions
-    instr := MemoryInstruction(iw)
+exec_mem :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> bool {
     el := eff_addr(instr, cpu, mem)
-    op := Op(instr.OP << 11)
+    op := MemoryOp(instr.OP << 11)
     switch op {
     case .STZ: mem[el] = 0
     case .STA: mem[el] = cpu.A
@@ -82,19 +104,73 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     case .JMP: cpu.P = el
     case .JPL: cpu.L = cpu.P; cpu.P = el
 	case:
-		fmt.printfln("Illegal opcode. %d at P = %d", op, cpu.P)
+		fmt.printfln("Illegal MEM opcode. %d at P = %d", op, cpu.P)
 		return false
     }
     cpu.P += 1
     return true
 }
 
+exec_arg :: proc(instr: ArgumentInstruction, cpu: ^CPU) -> bool {
+    op := ArgumentOp(instr.OP << 8)
+    arg := u16(instr.arg)  // TODO: fix so negation works
+    switch op {
+    case .SAA: cpu.A = arg
+    case .AAA: cpu.A += arg
+    case .SAX: cpu.X = arg
+    case .AAX: cpu.X += arg
+    case .SAT: cpu.T = arg
+    case .AAT: cpu.T += arg
+    case .SAB: cpu.B = arg
+    case .AAB: cpu.B += arg
+    case:
+        fmt.printfln("Illegal ARG opcode %o at P=%d", op, cpu.P)
+        return false
+    }
+    return true
+}
+
+exec_condjump :: proc(instr: ConditionalJumpInstruction, cpu: ^CPU) -> bool {
+    op := ConditionalJumpOp(instr.OP << 8)
+    Δ  := u16(instr.Δ) // TODO: fix so negation works
+    // TODO: fix so A can be negative (or check for > 127) and that the comparisons are correct
+    switch op {
+    case .JAP: if cpu.A >= 0 { cpu.P += Δ }
+    case .JAN: if cpu.A <  0 { cpu.P += Δ }
+    case .JAZ: if cpu.A == 0 { cpu.P += Δ }
+    case .JAF: if cpu.A != 0 { cpu.P += Δ }
+    case .JXN: if cpu.X <  0 { cpu.P += Δ }
+    case .JPC: cpu.X += 1; if cpu.X >= 0 { cpu.P += Δ }
+    case .JNC: cpu.X += 1; if cpu.X < 0  { cpu.P += Δ }
+    case:
+        fmt.printfln("Illegal CONDJUMP opcode %o at P=%d", op, cpu.P)
+        return false
+    }
+    return true
+}
+
+step :: proc(cpu: ^CPU, mem: []u16) -> bool {
+    instr := mem[cpu.P]
+    debug_cpu(cpu)
+    fmt.printfln("  instr: 0o%06o/0b%016b", instr, instr)
+    // TODO: Decide which executor to use in some way
+    when true  { return exec_mem(MemoryInstruction(instr), cpu, mem) }
+    when false { return exec_arg(ArgumentInstruction(instr), cpu) } 
+    when false { return exec_condjump(ConditionalJumpInstruction(instr), cpu) }
+    fmt.printfln("Unknown opcode word %06o at P=%d", instr, cpu.P)
+    return false
+}
+
 // Hand assembled demo program
 demo_program :: proc(mem: []u16) {
-    mem[0o0000] = u16(Op.LDA) | 0o000406  // LDA COUNT,B
-    mem[0o0001] = u16(Op.MIN) | 0o000406  // MIN COUNT,B
-    mem[0o0002] = u16(Op.STA) | 0o000416  // STA VALUE,XI,B
-    mem[0o0003] = 0o130001  // JAP 1  (not implemented – triggers error)
+    mem[0] = u16(MemoryOp.LDA) | 0o000406  // LDA COUNT,B
+    mem[1] = u16(MemoryOp.MIN) | 0o000406  // MIN COUNT,B
+    mem[2] = u16(MemoryOp.STA) | 0o000416  // STA VALUE,XI,B
+    mem[3] = 0o151000  // WAIT (not implemented, )
+}
+
+debug_cpu :: proc(cpu: ^CPU) {
+    fmt.printf("P: %o,\tA: %o,\tT: %o,\tX: %o,\tB: %o", cpu.P, cpu.A, cpu.T, cpu.X, cpu.B)
 }
 
 main :: proc() {
@@ -104,11 +180,14 @@ main :: proc() {
     cpu := CPU{P = 0, A = 0, T = 0, X = 0, B = 0}
 
     demo_program(memory)
-    fmt.println("Initial CPU state:")
-    fmt.printfln("P: %o, A: %o, T: %o, X: %o, B: %o", cpu.P, cpu.A, cpu.T, cpu.X, cpu.B)
+    debug_cpu(&cpu)
+    fmt.println("   <- Initial CPU state")
 
-    for step(&cpu, memory) {}
+    for step(&cpu, memory) {
+        cpu.P += 1
+        if cpu.P > 5 { break }
+    }
 
-    fmt.println("CPU state after execution:")
-    fmt.printfln("P: %o, A: %o, T: %o, X: %o, B: %o", cpu.P, cpu.A, cpu.T, cpu.X, cpu.B)
+    debug_cpu(&cpu)
+    fmt.println("   <- End CPU state")
 }
