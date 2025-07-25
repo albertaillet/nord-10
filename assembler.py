@@ -34,7 +34,8 @@ class Category(Enum):
 
 
 class Instruction(NamedTuple):
-    i: int
+    line_num: int
+    address: int
     label: str | None
     mnemonic: str | None
     args: str | None
@@ -44,22 +45,23 @@ class Instruction(NamedTuple):
 
 
 def tokenize(f: Iterable[str], instruction_info: dict[str, tuple[int, Category]]) -> Iterator[Instruction]:
-    i = 0
-    for line in f:
+    address = 0
+    for line_num, line in enumerate(f, start=1):
         if not line.strip() or line.lstrip().startswith('%'):
             continue  # empty line or comment
         m = LINE_PATTERN.match(line)
         if not m:
-            raise ValueError(f'Line {i} not matched "{line}"')
-        i += 1
+            raise ValueError(f'Line {line_num} not matched "{line}"')
         label = m.group('label')
         mnemonic = m.group('mnemonic')
         args = m.group('args')
         comment = m.group('comment')
         binary, category = instruction_info.get(mnemonic, (None, Category.LITERAL))
-        yield Instruction(
-            i=i, label=label, mnemonic=mnemonic, args=args, comment=comment, binary=binary, category=category
+        instr = Instruction(
+            line_num=line_num, address=address, label=label, mnemonic=mnemonic, args=args, comment=comment, binary=binary, category=category
         )
+        yield instr
+        address += instruction_length(instr)
 
 
 def load_op_info(path: Path) -> dict[str, tuple[int, Category]]:
@@ -76,13 +78,11 @@ def load_op_info(path: Path) -> dict[str, tuple[int, Category]]:
 def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
     """First pass to create {labels -> addresses} symbol_table."""
     symbol_table = {}
-    address = 0
     for instr in instructions:
         if instr.label:
             if instr.label in symbol_table:
                 raise ValueError(f'Repeated label: {instr.label} at {instr.i}')
-            symbol_table[instr.label] = address
-        address += instruction_length(instr)
+            symbol_table[instr.label] = instr.address
     return symbol_table
 
 
@@ -99,9 +99,8 @@ def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
         case Category.MEM: return encode_mem(instr, symbol_table)
         case Category.ARG: return encode_arg(instr)
         case Category.LITERAL:  # literals (not an instruction, can be multiple 16 bit values)
-            args = instr.args
-            if args.isdigit(): return int(args).to_bytes(2, 'big')  # numeric literal # NOTE: supports up to 2^16
-            if args.startswith('"'): return args[1:].encode('ascii')  # string literal TODO: pad this to 16-bit (now it could be 8-bit)
+            if instr.args.isdigit(): return int(instr.args).to_bytes(2, 'big')  # numeric literal # NOTE: supports up to 2^16
+            if instr.args.startswith('"'): return instr.args[1:].encode('ascii')  # string literal TODO: pad this to 16-bit (now it could be 8-bit)
             raise NotImplementedError('Unknown literal')
         case _:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
@@ -121,6 +120,7 @@ def instruction_length(instr: Instruction) -> int:
 def encode_signed_int8(value: int) -> int:
     """Encode a signed int to bytes and back: x -> x if x > 0 else x -> 256 - x (-128 <= x <= 127)."""
     return int.from_bytes(value.to_bytes(1, 'big', signed=True))
+
 
 # ┌───────────────────┬───┬───┬───┬─────────────────────┐
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
@@ -154,14 +154,15 @@ def print_program(program: bytes) -> None:
 
 def assemble(source_code: str, op_info: dict[str, tuple[int, Category]]) -> bytes:
     source_lines = source_code.splitlines()
-    symbol_table = pass1(tokenize(source_lines, op_info))
-    return pass2(tokenize(source_lines, op_info), symbol_table)
+    tokens = list(tokenize(source_lines, op_info))
+    symbol_table = pass1(tokens)
+    return pass2(tokens, symbol_table)
 
 
 def read_input_file(source_path: Path | None) -> str:
     if source_path is None:
-        if sys.stdin.isatty(): # Stdin is from a terminal (nothing piped), so fail gracefully
-            raise ValueError("No input file provided and no input received from stdin.")
+        if sys.stdin.isatty():  # Stdin is from a terminal (nothing piped)
+            raise ValueError('No input file provided and no input received from stdin.')
         return sys.stdin.read()
     return source_path.read_text()
 
