@@ -19,7 +19,7 @@ def test_instructions_csv():
 
 sources = [
 # Memory instructions
-('	MPY	—',     0b10100_000_00000000),
+('	MPY	-',     0b10100_000_00000000),
 ('	MPY	,X',    0b10100_100_00000000),
 ('	MPY	I',     0b10100_010_00000000),
 ('	MPY	,XI',   0b10100_110_00000000),
