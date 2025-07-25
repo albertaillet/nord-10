@@ -119,7 +119,7 @@ def instruction_length(instr: Instruction) -> int:
 
 
 def encode_signed_int8(value: int) -> int:
-    """Encode a signed int to bytes and back: x -> x if x > 0 else x -> 256 - x (-128 < x < 127)."""
+    """Encode a signed int to bytes and back: x -> x if x > 0 else x -> 256 - x (-128 <= x <= 127)."""
     return int.from_bytes(value.to_bytes(1, 'big', signed=True))
 
 # ┌───────────────────┬───┬───┬───┬─────────────────────┐
