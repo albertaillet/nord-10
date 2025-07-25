@@ -126,13 +126,12 @@ def encode_signed_int8(value: int) -> int:
 # │      OP. CODE     │ X │ I │ B │   Displacement (Δ)  │
 # │ 15 │ 14 13 12 │ 11 10   9 │ 8   7 6 │ 5 4 3 │ 2 1 0 │
 # └────┴──────────┴───────────┴─────────┴───────┴───────┘
-MEM_PATTERN = re.compile(r'^(?P<delta>-?\d*)?(?P<X>,X)?(?P<I>I)?(?P<B>,B)?$')
+MEM_PATTERN = re.compile(r'^(?:(?P<delta>-?\d*)|(?P<label>\w+))(?P<X>,X)?(?P<I> ?I)?(?P<B>,B)?$')
 def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
-    # TODO: make labels work
     m = MEM_PATTERN.match(instr.args)
-    x, i, b = bool(m.group('X')), bool(m.group('I')), bool(bool(m.group('B')))
-    delta = m.group('delta')
-    Δ = encode_signed_int8(0 if not delta or delta == '-' else int(delta))
+    Δ, x, i, b = 0, bool(m.group('X')), bool(m.group('I')), bool(m.group('B'))
+    if (delta := m.group('delta')): Δ = encode_signed_int8(0 if delta == '-' else int(delta))
+    if (label := m.group('label')): Δ = encode_signed_int8(instr.address - symbol_table[label])
     return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2, 'big')
 
 
