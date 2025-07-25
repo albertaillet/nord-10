@@ -81,7 +81,7 @@ def pass1(instructions: Iterable[Instruction]) -> dict[str, int]:
     for instr in instructions:
         if instr.label:
             if instr.label in symbol_table:
-                raise ValueError(f'Repeated label: {instr.label} at {instr.i}')
+                raise ValueError(f'Repeated label: {instr.label} at {instr.line_num}')
             symbol_table[instr.label] = instr.address
     return symbol_table
 
@@ -131,7 +131,7 @@ def encode_mem(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     m = MEM_PATTERN.match(instr.args)
     Δ, x, i, b = 0, bool(m.group('X')), bool(m.group('I')), bool(m.group('B'))
     if (delta := m.group('delta')): Δ = encode_signed_int8(0 if delta == '-' else int(delta))
-    if (label := m.group('label')): Δ = encode_signed_int8(instr.address - symbol_table[label])
+    if (label := m.group('label')): Δ = encode_signed_int8(symbol_table[label] - instr.address)
     return (instr.binary | (x << 10) | (i << 9) | (b << 8) | Δ).to_bytes(2, 'big')
 
 
