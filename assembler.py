@@ -9,8 +9,13 @@ from pathlib import Path
 from typing import NamedTuple
 
 DEFAULT_INSTRUCTIONS_PATH = Path(__file__).parent / 'instructions.csv'
-LINE_PATTERN = re.compile(r'^(?P<label>\w+)?\s*(?P<mnemonic>[A-Z]{3,4})?\s*(?P<args>[^\s^%]+)?\s*(?:%\s*(?P<comment>.*))?$')
-
+MNEM_PATTERN = r'[A-Z]{3,4}\b'
+LINE_PATTERN = re.compile(
+    rf'^(?:(?P<label>\w+)\s*(?={MNEM_PATTERN}))?'
+    rf'\s*(?P<mnemonic>{MNEM_PATTERN})?'
+    r'\s*(?P<args>[^\s%]+)?'
+    r'\s*(?:%(?P<comment>.*))?$'
+)
 
 def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
     """Parse the command line arguments to the script."""
