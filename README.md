@@ -17,9 +17,9 @@ The assembler is written in Python (version 3.13.5 for development, version 3.10
 ```sh
 ./assembler.py --help
 ```
-The emulator is written in the [Odin](https://odin-lang.org/) programming language. 
+The emulator is written in the [Odin](https://odin-lang.org/) (version dev-2025-07:090cac62f for development) programming language.
 ```sh
-odin run emulator.odin -file
+odin run emulator.odin -file -- <path_to_assembled_program>
 ```
 The tests for the assembler are written in Python and can be run with
 ```sh

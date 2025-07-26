@@ -1,6 +1,7 @@
 package main
 
 import "core:fmt"
+import "core:os"
 
 MEMSIZE :: 1 << 16
 
@@ -161,16 +162,40 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     return false
 }
 
-// Hand assembled demo program
-demo_program :: proc(mem: []u16) {
-    mem[0] = u16(MemoryOp.LDA) | 0o000406  // LDA COUNT,B
-    mem[1] = u16(MemoryOp.MIN) | 0o000406  // MIN COUNT,B
-    mem[2] = u16(MemoryOp.STA) | 0o000416  // STA VALUE,XI,B
-    mem[3] = 0o151000  // WAIT (not implemented, )
+read_input :: proc() -> []u8 {
+    if len(os.args) < 2 {
+        fmt.println("Usage: emulator.odin -- <filename>");
+        os.exit(1);
+    }
+    data, e := os.read_entire_file_from_filename_or_err(os.args[1], context.allocator);
+    if e != os.ERROR_NONE {
+        fmt.eprintln("Error reading file: %v", e);
+        os.exit(1);
+    }
+    return data;
+}
+
+big_endian_2u8_to_u16 :: proc(b0, b1: u8) -> u16 { 
+    return (u16(b0) << 8) | u16(b1);
+}
+
+load_into_memory :: proc(mem: []u16, src: []u8) -> int {
+    if (len(src) & 1) == 1 { assert(false, "src must be even length"); }
+    n := min(len(mem), len(src)/2);
+    for i in 0..<n {
+        mem[i] = big_endian_2u8_to_u16(src[2*i], src[2*i+1]);
+    }
+    return n;
 }
 
 debug_cpu :: proc(cpu: ^CPU) {
     fmt.printf("P: %o,\tA: %o,\tT: %o,\tX: %o,\tB: %o", cpu.P, cpu.A, cpu.T, cpu.X, cpu.B)
+}
+
+debug_memory :: proc(mem: []u16, start: int, end: int) {
+    for i in start..<end { 
+        fmt.printfln(" %04d: 0o%06o/0b%016b", i, mem[i], mem[i]);
+    }
 }
 
 main :: proc() {
@@ -179,13 +204,20 @@ main :: proc() {
 
     cpu := CPU{P = 0, A = 0, T = 0, X = 0, B = 0}
 
-    demo_program(memory)
+    program := read_input();
+    fmt.println("Got input with", len(program), "bytes");
+    n := load_into_memory(memory, program);
+    fmt.println("Initial memory contents:");
+    debug_memory(memory, 0, n)
     debug_cpu(&cpu)
     fmt.println("   <- Initial CPU state")
 
+    steps := 0
     for step(&cpu, memory) {
         cpu.P += 1
+        steps += 1
         if cpu.P > 5 { break }
+        if steps > 10 { break }
     }
 
     debug_cpu(&cpu)
