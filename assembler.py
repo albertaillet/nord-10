@@ -9,12 +9,11 @@ from pathlib import Path
 from typing import NamedTuple
 
 DEFAULT_INSTRUCTIONS_PATH = Path(__file__).parent / 'instructions.csv'
-MNEM_PATTERN = r'[A-Z]{3,4}\b'
 LINE_PATTERN = re.compile(
-    rf'^(?:(?P<label>\w+)\s*(?={MNEM_PATTERN}))?'
-    rf'\s*(?P<mnemonic>{MNEM_PATTERN})?'
-    r'\s*(?P<args>[^\s%]+)?'
-    r'\s*(?:%(?P<comment>.*))?$'
+    r'^(?P<label>\w+)?\s*'
+    r'(?P<mnemonic>[A-Z]{3,4})?\s*'
+    r'(?P<args>[^\s^%]+)?\s*'
+    r'(?:%\s*(?P<comment>.*))?$'
 )
 
 def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
@@ -162,7 +161,6 @@ def print_program(program: bytes) -> None:
 def assemble(source_code: str, op_info: dict[str, tuple[int, Category]]) -> bytes:
     source_lines = source_code.splitlines()
     tokens = list(tokenize(source_lines, op_info))
-    # print(*tokens, sep='\n')
     symbol_table = pass1(tokens)
     return pass2(tokens, symbol_table)
 
