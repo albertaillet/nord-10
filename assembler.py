@@ -29,8 +29,8 @@ def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
 
 class Category(Enum):
     """Categories of instructions."""
-    MEM = auto(); REGBLOCK = auto(); CONV = auto(); ARG = auto(); REG = auto(); BIT = auto(); CONDJUMP = auto(); SKIP = auto(); SHIFT = auto()
-    TRANS = auto(); EXEC = auto(); INTER = auto(); SYS = auto(); WAIT = auto(); IO = auto(); IDENT = auto(); LITERAL = auto()
+    MEM = auto(); BYTE = auto(); REGBLOCK = auto(); CONV = auto(); ARG = auto(); REG = auto(); BIT = auto(); CONDJUMP = auto(); SKIP = auto()
+    SHIFT = auto(); TRANS = auto(); EXEC = auto(); INTER = auto(); SYS = auto(); WAIT = auto(); IO = auto(); IDENT = auto(); LITERAL = auto()
 
 
 class Instruction(NamedTuple):
