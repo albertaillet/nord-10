@@ -38,12 +38,12 @@ sources = [
 (' MPY I,B',   0b10100_011_00000000),
 (' MPY ,XI,B', 0b10100_111_00000000),
 (' MPY 127',   0b10100_000_01111111),
-# (' MPY 128',   0b10100_000_01111111),  # raises too big to convert
+(' MPY 128',   OverflowError('int too big to convert')),
 (' MPY 1',     0b10100_000_00000001),
 (' MPY 0',     0b10100_000_00000000),
 (' MPY -1',    0b10100_000_11111111),
 (' MPY -128',  0b10100_000_10000000),
-# (' MPY -129',  0b10100_000_10000000),  # raises too big to convert
+(' MPY -129',  OverflowError('int too big to convert')),
 (' MPY 1,XI',  0b10100_110_00000001),
 (' MPY 23,XI', 0b10100_110_00010111),
 (' MPY -9,XI', 0b10100_110_11110111),
@@ -99,8 +99,8 @@ sources = [
 (' 0',         0b0000_0000_0000_0000),
 (' 1',         0b0000_0000_0000_0001),
 (' 65535',     0b1111_1111_1111_1111),
-# (' 65536', 0),   # raises too big to convert
-# (' -1',    0),   # not supported
+(' 65536',     OverflowError('int too big to convert')),
+(' -1',        NotImplementedError('Unknown literal') ),
 ]
 
 
@@ -108,8 +108,16 @@ if __name__ == '__main__':
     test_instructions_csv()
     op_info = load_op_info(DEFAULT_INSTRUCTIONS_PATH)
     for source, expected in sources:
-        out = assemble(source, op_info)
-        out_as_int = int.from_bytes(out, 'big')
-        l = len(out)*8
-        assert out_as_int == expected, f"\n{out_as_int:0{l}b}\n!=\n{expected:0{l}b}\nfor '{source}'"
+        if isinstance(expected, Exception):
+            try:
+                assemble(source, op_info)
+            except Exception as e:
+                assert type(e) == type(expected) and e.args == expected.args, f'{e=} != {expected=}'
+            else:
+                raise AssertionError(f'{source=} did not raise {expected=}.')
+        else:
+            out = assemble(source, op_info)
+            out_as_int = int.from_bytes(out, 'big')
+            l = len(out)*8
+            assert out_as_int == expected, f"\n{out_as_int:0{l}b}\n!=\n{expected:0{l}b}\nfor '{source}'"
     print('All tests passed!')
