@@ -94,13 +94,18 @@ def pass2(instructions: Iterable[Instruction], symbol_table: dict[str, int]) -> 
     return bytes(program)
 
 
+def pad_to_even_length(data: bytes, *, pad_byte: bytes = b'\x00') -> bytes:
+    """Pad the data to an even length with zero bytes."""
+    return data if len(data) % 2 == 0 else data + pad_byte
+
+
 def encode(instr: Instruction, symbol_table: dict[str, int]) -> bytes:
     match instr.category:
         case Category.MEM: return encode_mem(instr, symbol_table)
         case Category.ARG: return encode_arg(instr)
         case Category.LITERAL:  # literals (not an instruction, can be multiple 16 bit values)
             if instr.args.isdigit(): return int(instr.args).to_bytes(2, 'big')  # numeric literal # NOTE: supports up to 2^16
-            if instr.args.startswith('"'): return instr.args[1:].encode('ascii')  # string literal TODO: pad this to 16-bit (now it could be 8-bit)
+            if instr.args.startswith('"'): return pad_to_even_length(instr.args[1:].encode('ascii'))  # string literal
             raise NotImplementedError('Unknown literal')
         case _:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
@@ -111,7 +116,7 @@ def instruction_length(instr: Instruction) -> int:
         case Category.MEM | Category.ARG: return 1
         case Category.LITERAL:
             if instr.args.isdigit(): return 1
-            if instr.args.startswith('"'): return len(instr.args[1:].encode('ascii')) // 2
+            if instr.args.startswith('"'): return (len(instr.args[1:].encode('ascii')) + 1) // 2
             raise NotImplementedError('Unknown literal')
         case _:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
