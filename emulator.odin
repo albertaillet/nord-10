@@ -187,7 +187,7 @@ load_into_memory :: proc(mem: []u16, src: []u8) -> int {
 }
 
 debug_cpu :: proc(cpu: ^CPU) {
-    fmt.printf("P: %o,\tA: %o,\tT: %o,\tX: %o,\tB: %o", cpu.P, cpu.A, cpu.T, cpu.X, cpu.B)
+    fmt.printf("P: %d,\tA: %d,\tT: %d,\tX: %d,\tB: %d", cpu.P, cpu.A, cpu.T, cpu.X, cpu.B)
 }
 
 debug_memory :: proc(mem: []u16, start: int, end: int) {

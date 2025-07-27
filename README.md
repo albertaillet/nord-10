@@ -25,6 +25,17 @@ The tests for the assembler are written in Python and can be run with
 ```sh
 ./test.py
 ```
+To assemble a file and then run it:
+```sh
+./assembler.py examples/arg_instructions.asm -o a.out && odin run emulator.odin -file -- a.out
+```
+Or compile the emulator first and then run with these commands:
+```sh
+odin build emulator.odin -file
+
+./assembler.py examples/arg_instructions.asm -o a.out && ./emulator a.out
+```
+
 
 ## References
 
