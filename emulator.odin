@@ -7,22 +7,26 @@ MEMSIZE :: 1 << 16
 
 // Instruction set for the Nord-10/S CPU
 MemoryOp :: enum u16 {
+    // Store Instructions
     STZ = 0o000000,
     STA = 0o004000,
     STT = 0o010000,
     STX = 0o014000,
     MIN = 0o040000,
+    // Load Instructions
     LDA = 0o044000,
     LDT = 0o050000,
     LDX = 0o054000,
+    // Arithmetical and Logical Instructions
     ADD = 0o060000,
     SUB = 0o064000,
     AND = 0o070000,
     ORA = 0o074000,
     MPY = 0o120000,
+    // Double Word Instructions
+    STD = 0o020000, LDD = 0o024000,
     // Unconditional jumps (MEM format)
-    JMP = 0o124000,
-    JPL = 0o134000,
+    JMP = 0o124000, JPL = 0o134000,
 }
 ArgumentOp :: enum u16 {
     SAA = 0o170400, AAA = 0o172400,
@@ -71,7 +75,6 @@ ConditionalJumpInstruction :: bit_field u16 {
     OP : u16 | 8,  // NOTE: has to be shifted by 8 to be compared with Op enum
 }
 
-// CPU state
 CPU :: struct {
     STS, D, P, B, L, A, T, X : u16
 }
@@ -102,6 +105,8 @@ exec_mem :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> bool {
     case .AND: cpu.A &= mem[el]
     case .ORA: cpu.A |= mem[el]
     case .MPY: cpu.A *= mem[el]
+    case .STD: mem[el], mem[el+1] =   cpu.A,     cpu.D
+    case .LDD:   cpu.A,     cpu.D = mem[el], mem[el+1]
     case .JMP: cpu.P = el
     case .JPL: cpu.L = cpu.P; cpu.P = el
 	case:
@@ -114,7 +119,7 @@ exec_mem :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> bool {
 
 exec_arg :: proc(instr: ArgumentInstruction, cpu: ^CPU) -> bool {
     op := ArgumentOp(instr.OP << 8)
-    arg := u16(instr.arg)  // TODO: fix so negation works
+    arg := u16(instr.arg)
     switch op {
     case .SAA: cpu.A = arg
     case .AAA: cpu.A += arg
@@ -133,7 +138,7 @@ exec_arg :: proc(instr: ArgumentInstruction, cpu: ^CPU) -> bool {
 
 exec_condjump :: proc(instr: ConditionalJumpInstruction, cpu: ^CPU) -> bool {
     op := ConditionalJumpOp(instr.OP << 8)
-    Δ  := u16(instr.Δ) // TODO: fix so negation works
+    Δ  := u16(instr.Δ)
     // TODO: fix so A can be negative (or check for > 127) and that the comparisons are correct
     switch op {
     case .JAP: if cpu.A >= 0 { cpu.P += Δ }
