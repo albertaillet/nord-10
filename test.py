@@ -81,13 +81,13 @@ sources = [
 (' SAA 1',     0b11110_001_00000001),
 (' SAA 23',    0b11110_001_00010111),
 (' SAA 127',   0b11110_001_01111111),
-(' AAA 1',     0b11110_101_00000001),
-(' SAX 1',     0b11110_011_00000001),
-(' AAX 1',     0b11110_111_00000001),
-(' SAT 1',     0b11110_010_00000001),
-(' AAT 1',     0b11110_110_00000001),
-(' SAB 1',     0b11110_000_00000001),
-(' AAB 1',     0b11110_100_00000001),
+(' AAA 22',    0b11110_101_00010110),
+(' SAX 23',    0b11110_011_00010111),
+(' AAX 24',    0b11110_111_00011000),
+(' SAT 25',    0b11110_010_00011001),
+(' AAT 26',    0b11110_110_00011010),
+(' SAB 27',    0b11110_000_00011011),
+(' AAB 28',    0b11110_100_00011100),
 # String Literals
 (' "a',        0b1100001_00000000),  # padded to 16 bits
 (' "ab',       0b1100001_01100010),
@@ -112,7 +112,7 @@ if __name__ == '__main__':
             try:
                 assemble(source, op_info)
             except Exception as e:
-                assert type(e) == type(expected) and e.args == expected.args, f'{e=} != {expected=}'
+                assert type(e) is type(expected) and e.args == expected.args, f'{e=} != {expected=}'
             else:
                 raise AssertionError(f'{source=} did not raise {expected=}.')
         else:
