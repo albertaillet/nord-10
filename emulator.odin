@@ -152,14 +152,12 @@ exec_condjump :: proc(instr: ConditionalJumpInstruction, cpu: ^CPU) -> bool {
 
 step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     instr := mem[cpu.P]
-    debug_cpu(cpu)
-    fmt.printfln("  instr: 0o%06o/0b%016b", instr, instr)
-    // TODO: Decide which executor to use in some way
-    when true  { return exec_mem(MemoryInstruction(instr), cpu, mem) }
-    when false { return exec_arg(ArgumentInstruction(instr), cpu) } 
-    when false { return exec_condjump(ConditionalJumpInstruction(instr), cpu) }
-    fmt.printfln("Unknown opcode word %06o at P=%d", instr, cpu.P)
-    return false
+    top5 := instr >> 11
+    switch top5 {
+    case 0b11110: return exec_arg(ArgumentInstruction(instr), cpu)
+    case 0b10110: return exec_condjump(ConditionalJumpInstruction(instr), cpu)
+    case:         return exec_mem(MemoryInstruction(instr), cpu, mem)
+    }
 }
 
 read_input :: proc() -> []u8 {
@@ -214,10 +212,12 @@ main :: proc() {
 
     steps := 0
     for step(&cpu, memory) {
+        fmt.printfln("\tinstr: 0o%06o/0b%016b", memory[cpu.P], memory[cpu.P])
         cpu.P += 1
         steps += 1
-        if cpu.P > 5 { break }
-        if steps > 10 { break }
+        debug_cpu(&cpu)
+        if cpu.P > 15 { break }
+        if steps > 20 { break }
     }
 
     debug_cpu(&cpu)
