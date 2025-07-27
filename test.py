@@ -103,9 +103,7 @@ sources = [
 (' -1',        NotImplementedError('Unknown literal') ),
 ]
 
-
-if __name__ == '__main__':
-    test_instructions_csv()
+def test_input_output():
     op_info = load_op_info(DEFAULT_INSTRUCTIONS_PATH)
     for source, expected in sources:
         if isinstance(expected, Exception):
@@ -120,4 +118,9 @@ if __name__ == '__main__':
             out_as_int = int.from_bytes(out, 'big')
             l = len(out)*8
             assert out_as_int == expected, f"\n{out_as_int:0{l}b}\n!=\n{expected:0{l}b}\nfor '{source}'"
+
+
+if __name__ == '__main__':
+    test_instructions_csv()
+    test_input_output()
     print('All tests passed!')
