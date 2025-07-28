@@ -126,9 +126,10 @@ def instruction_length(instr: Instruction) -> int:
             raise NotImplementedError(f'Category {instr.category} is not implemented')
 
 
-def encode_signed_int8(value: int) -> int:
-    """Encode a signed int to bytes and back: x -> x if x > 0 else x -> 256 - x (-128 <= x <= 127)."""
-    return int.from_bytes(value.to_bytes(1, 'big', signed=True))
+def encode_signed_int8(x: int) -> int:
+    """Encode a signed int to bytes and back: x -> x if x > 0 else x -> 256 + x (-128 <= x <= 127)."""
+    return int.from_bytes(x.to_bytes(1, 'big', signed=True))
+    # return int.from_bytes(struct.pack('b', x)) # alternative using struct
 
 
 # ┌───────────────────┬───┬───┬───┬─────────────────────┐
