@@ -48,7 +48,14 @@ odin build emulator.odin -file
 - NDwiki https://www.ndwiki.org/wiki/Main_Page
   - Documentationlist https://www.ndwiki.org/wiki/Documentation_list-Hardware
   - Emulator https://www.ndwiki.org/wiki/Talk:ND100_emulator_project
+  - 48-bit floating point http://www.ndwiki.org/wiki/48-bit_floating_point
 - vtda.org https://vtda.org/docs/computing/NorskData/
+- bitraf.no
+  - http://heim.bitraf.no/tingo/files/nd/
+  - has a copy of ND-06.014.02 ND-100 Reference Manual January 1982
+  - has a copy of ND-06.008 NORD-10/S REFERENCE MAUAL
+- bitsavers.org:
+  - http://www.bitsavers.org/pdf/norskData/
 - datormuseum.se http://www.datormuseum.se/documentation-software/norsk-data-documentation.html
 
 List of scanned documents available at datormuseum.se as of 21/07/2025
