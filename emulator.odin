@@ -113,7 +113,6 @@ exec_mem :: proc(instr: MemoryInstruction, cpu: ^CPU, mem: []u16) -> bool {
 		fmt.printfln("Illegal MEM opcode. %d at P = %d", op, cpu.P)
 		return false
     }
-    cpu.P += 1
     return true
 }
 
