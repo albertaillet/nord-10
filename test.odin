@@ -1,6 +1,7 @@
 package main
 
 import "core:testing"
+import "core:fmt"
 
 @(test)
 test_big_endian_conversion :: proc(t: ^testing.T) {
@@ -248,4 +249,309 @@ test_eff_addr_with_base :: proc(t: ^testing.T) {
 	addr := eff_addr(instr, &cpu, memory)
 	
 	testing.expect_value(t, addr, u16(55))  // B(50) + Δ(5) (since B=true, use B register)
+}
+
+// ============ INTEGRATION TESTS ============
+
+@(test)
+test_integration_simple_program :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// SAA 5 (Set A to 5)
+	memory[0] = u16(ArgumentOp.SAA) | 5
+	// AAA 3 (Add 3 to A)
+	memory[1] = u16(ArgumentOp.AAA) | 3
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute at least one step")
+	testing.expect_value(t, cpu.A, u16(8))
+}
+
+// ============ INTEGRATION TESTS (using execute function) ============
+// These tests use properly formed instruction sequences and the execute() function
+
+@(test)
+test_integration_simple_arg_sequence :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Build a simple program: SAA 5, then AAA 3 (should give A=8)
+	// SAA = 0o170400, arg in lower 8 bits
+	memory[0] = u16(ArgumentOp.SAA) | 5
+	memory[1] = u16(ArgumentOp.AAA) | 3
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute at least one step")
+	testing.expect_value(t, cpu.A, u16(8))
+}
+
+@(test)
+test_integration_set_multiple_registers :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Set X, T, B using SAX, SAT, SAB
+	memory[0] = u16(ArgumentOp.SAX) | 42
+	memory[1] = u16(ArgumentOp.SAT) | 17
+	memory[2] = u16(ArgumentOp.SAB) | 99
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute at least one step")
+	testing.expect_value(t, cpu.X, u16(42))
+	testing.expect_value(t, cpu.T, u16(17))
+	testing.expect_value(t, cpu.B, u16(99))
+}
+
+@(test)
+test_integration_add_and_accumulate :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 100, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Add 10 three times: AAA 10, AAA 10, AAA 10 (should give A=130)
+	memory[0] = u16(ArgumentOp.AAA) | 10
+	memory[1] = u16(ArgumentOp.AAA) | 10
+	memory[2] = u16(ArgumentOp.AAA) | 10
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute at least one step")
+	testing.expect_value(t, cpu.A, u16(130))
+}
+
+@(test)
+test_integration_sequence_with_jumps :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// This test should fail or have interesting behavior with current implementation
+	// because the execute() loop will exit when jump is taken to address > 15
+	// Program: SAA 99, JAP 8 (will jump, but P > 15 limit will stop execution)
+	memory[0] = u16(ArgumentOp.SAA) | 99
+	memory[1] = u16(ConditionalJumpOp.JAP) | 8
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute at least one step")
+	testing.expect_value(t, cpu.A, u16(99))
+}
+
+@(test)
+test_integration_accumulate_via_arg_instructions :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// SAA 20, AAA 15, AAA 10, AAA 5 (should give A=50)
+	memory[0] = u16(ArgumentOp.SAA) | 20
+	memory[1] = u16(ArgumentOp.AAA) | 15
+	memory[2] = u16(ArgumentOp.AAA) | 10
+	memory[3] = u16(ArgumentOp.AAA) | 5
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(50))
+}
+
+@(test)
+test_integration_set_all_working_registers :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Use only valid signed 8-bit values (-128 to 127)
+	// SAA 100, SAX 50, SAT 75, SAB 25
+	memory[0] = u16(ArgumentOp.SAA) | 100
+	memory[1] = u16(ArgumentOp.SAX) | 50
+	memory[2] = u16(ArgumentOp.SAT) | 75
+	memory[3] = u16(ArgumentOp.SAB) | 25
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(100))
+	testing.expect_value(t, cpu.X, u16(50))
+	testing.expect_value(t, cpu.T, u16(75))
+	testing.expect_value(t, cpu.B, u16(25))
+}
+
+@(test)
+test_integration_mix_set_and_add :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// SAX 10, AAX 5, AAX 3 (should give X=18)
+	// SAT 100, AAT 50 (should give T=150)
+	memory[0] = u16(ArgumentOp.SAX) | 10
+	memory[1] = u16(ArgumentOp.AAX) | 5
+	memory[2] = u16(ArgumentOp.AAX) | 3
+	memory[3] = u16(ArgumentOp.SAT) | 100
+	memory[4] = u16(ArgumentOp.AAT) | 50
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.X, u16(18))
+	testing.expect_value(t, cpu.T, u16(150))
+}
+
+@(test)
+test_integration_base_register_accumulation :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// SAB 5, AAB 10, AAB 20 (should give B=35)
+	memory[0] = u16(ArgumentOp.SAB) | 5
+	memory[1] = u16(ArgumentOp.AAB) | 10
+	memory[2] = u16(ArgumentOp.AAB) | 20
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.B, u16(35))
+}
+
+@(test)
+test_integration_large_values :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// SAA with max positive signed 8-bit value (127)
+	memory[0] = u16(ArgumentOp.SAA) | 127
+	memory[1] = u16(ArgumentOp.AAA) | 127
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(254))
+}
+
+@(test)
+test_integration_zero_operations :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 100, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// SAX 0, SAT 0, SAA 0 (should clear all)
+	memory[0] = u16(ArgumentOp.SAX) | 0
+	memory[1] = u16(ArgumentOp.SAT) | 0
+	memory[2] = u16(ArgumentOp.SAA) | 0
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(0))
+	testing.expect_value(t, cpu.X, u16(0))
+	testing.expect_value(t, cpu.T, u16(0))
+}
+
+@(test)
+test_integration_register_independence :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Verify that setting one register doesn't affect others
+	memory[0] = u16(ArgumentOp.SAA) | 11
+	memory[1] = u16(ArgumentOp.SAX) | 22
+	memory[2] = u16(ArgumentOp.SAT) | 33
+	memory[3] = u16(ArgumentOp.SAB) | 44
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(11))
+	testing.expect_value(t, cpu.X, u16(22))
+	testing.expect_value(t, cpu.T, u16(33))
+	testing.expect_value(t, cpu.B, u16(44))
+}
+
+@(test)
+test_integration_sequential_overwrites :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Set A multiple times to verify overwrites
+	memory[0] = u16(ArgumentOp.SAA) | 50
+	memory[1] = u16(ArgumentOp.SAA) | 75
+	memory[2] = u16(ArgumentOp.SAA) | 100
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(100))  // Last write wins
+}
+
+@(test)
+test_integration_add_to_preset_values :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 50, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// A starts at 50, add values
+	memory[0] = u16(ArgumentOp.AAA) | 25
+	memory[1] = u16(ArgumentOp.AAA) | 25
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(100))
+}
+
+@(test)
+test_integration_set_in_different_order :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Different order of register sets
+	memory[0] = u16(ArgumentOp.SAT) | 10
+	memory[1] = u16(ArgumentOp.SAB) | 20
+	memory[2] = u16(ArgumentOp.SAA) | 30
+	memory[3] = u16(ArgumentOp.SAX) | 40
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(30))
+	testing.expect_value(t, cpu.T, u16(10))
+	testing.expect_value(t, cpu.B, u16(20))
+	testing.expect_value(t, cpu.X, u16(40))
+}
+
+@(test)
+test_integration_chain_adds :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 1, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// A=1, then add 1,1,1,1,1,1,1,1 (should be 9)
+	memory[0] = u16(ArgumentOp.AAA) | 1
+	memory[1] = u16(ArgumentOp.AAA) | 1
+	memory[2] = u16(ArgumentOp.AAA) | 1
+	memory[3] = u16(ArgumentOp.AAA) | 1
+	memory[4] = u16(ArgumentOp.AAA) | 1
+	memory[5] = u16(ArgumentOp.AAA) | 1
+	memory[6] = u16(ArgumentOp.AAA) | 1
+	memory[7] = u16(ArgumentOp.AAA) | 1
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(9))
+}
+
+@(test)
+test_integration_mixed_register_sequences :: proc(t: ^testing.T) {
+	cpu := CPU{P = 0, A = 0, B = 0, X = 0, T = 0, D = 0}
+	memory := make([]u16, 100)
+	defer delete(memory)
+
+	// Interleave different register operations (keep within P > 15 limit)
+	memory[0] = u16(ArgumentOp.SAA) | 5
+	memory[1] = u16(ArgumentOp.SAX) | 10
+	memory[2] = u16(ArgumentOp.AAA) | 2
+	memory[3] = u16(ArgumentOp.AAX) | 3
+
+	steps := execute(&cpu, memory, false)
+	testing.expect(t, steps > 0, "Should execute steps")
+	testing.expect_value(t, cpu.A, u16(7))  // 5 + 2
+	testing.expect_value(t, cpu.X, u16(13))  // 10 + 3
 }
