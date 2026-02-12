@@ -1,7 +1,7 @@
 package main
 
 import "core:fmt"
-import "core:os"
+import os "core:os/os2"
 
 MEMSIZE :: 1 << 16
 
@@ -164,18 +164,6 @@ step :: proc(cpu: ^CPU, mem: []u16) -> bool {
     }
 }
 
-read_input :: proc() -> []u8 {
-    if len(os.args) < 2 {
-        fmt.println("Usage: emulator.odin -- <filename>");
-        os.exit(1);
-    }
-    data, e := os.read_entire_file_from_filename_or_err(os.args[1], context.allocator);
-    if e != os.ERROR_NONE {
-        fmt.eprintln("Error reading file: %v", e);
-        os.exit(1);
-    }
-    return data;
-}
 
 big_endian_2u8_to_u16 :: proc(b0, b1: u8) -> u16 { 
     return (u16(b0) << 8) | u16(b1);
@@ -221,7 +209,14 @@ main :: proc() {
 
     cpu := CPU{P = 0, A = 0, T = 0, X = 0, B = 0}
 
-    program := read_input();
+    e: os.Error
+    program: []u8
+    if len(os.args) < 2 {
+        program, e = os.read_entire_file_from_file(os.stdin, context.allocator)
+    } else {
+        program, e = os.read_entire_file_from_path(os.args[1], context.allocator)
+    }
+    if e != nil { fmt.eprintln("Error reading input stream: %v", e); os.exit(1); }
     fmt.println("Got input with", len(program), "bytes");
     n := load_into_memory(memory, program);
     fmt.println("Initial memory contents:");

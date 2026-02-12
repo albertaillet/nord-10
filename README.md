@@ -28,6 +28,8 @@ The tests for the assembler are written in Python and can be run with
 To assemble a file and then run it:
 ```sh
 ./assembler.py examples/arg_instructions.asm -o a.out && odin run emulator.odin -file -- a.out
+# Or if you want to run the assembled program with input from stdin:
+echo " STZ -127" | ./assembler.py | odin run emulator.odin -file
 ```
 Or compile the emulator first and then run with these commands:
 ```sh
