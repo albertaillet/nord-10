@@ -4,6 +4,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import unittest
 from pathlib import Path
 
 from assembler import DEFAULT_INSTRUCTIONS_PATH, Category, assemble, load_op_info
@@ -139,12 +140,19 @@ def test_end_to_end_assembler_to_emulator():
     assert 'Executed 1 steps' in result.stdout
     states = re.findall(r'P:\s*(\d+),\s*A:\s*(\d+),\s*T:\s*(\d+),\s*X:\s*(\d+),\s*B:\s*(\d+)', result.stdout)
     assert states, result.stdout
-    breakpoint()
     assert states[-1] == ('1', '5', '0', '0', '0')
 
 
+class TestNord10(unittest.TestCase):
+    def test_instructions_csv(self):
+        test_instructions_csv()
+
+    def test_input_output(self):
+        test_input_output()
+
+    def test_end_to_end_assembler_to_emulator(self):
+        test_end_to_end_assembler_to_emulator()
+
+
 if __name__ == '__main__':
-    test_instructions_csv()
-    test_input_output()
-    test_end_to_end_assembler_to_emulator()
-    print('All tests passed!')
+    unittest.main()
