@@ -22,7 +22,8 @@ def parse_command_line_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument('file', type=Path, nargs='?', default=None, help='Assembly source file or "-" to read from stdin.')
     parser.add_argument('-i', '--instructions', type=Path, default=DEFAULT_INSTRUCTIONS_PATH)
     parser.add_argument('-o', '--output', type=Path, default=None)
-    parser.add_argument('-c', '--command', type=str, default=None, help='Program passed in as a string (terminates option list).')
+    parser.add_argument('-c', '--command', type=str, default=None, help='Program passed in as a string.')
+    parser.add_argument('-p', '--pretty-print', action='store_true', help='Pretty print the assembled program instead of outputting binary.')
     args = parser.parse_args(argv)
     assert args.file is None or args.file.exists(), f'Source file {args.file} does not exist.'
     assert not (args.command and args.file), 'Use either a file or a command string.'
@@ -155,8 +156,9 @@ def encode_arg(instr: Instruction) -> bytes:
 
 
 def print_program(program: bytes) -> None:
-    for i in range(0, len(program), 2):
-        print(f'{program[i]:08b}{program[i + 1]:08b}')
+    print(program)
+    # for i in range(0, len(program), 2):
+        # print(f'{program[i]:08b}{program[i + 1]:08b}')
 
 
 def assemble(source_code: str, op_info: dict[str, tuple[int, Category]]) -> bytes:
@@ -179,6 +181,11 @@ if __name__ == '__main__':
     source_code = args.command or read_input_file(args.file)
     op_info = load_op_info(args.instructions)
     program = assemble(source_code, op_info)
-    print_program(program)
     if args.output:
         args.output.write_bytes(program)
+    elif args.pretty_print:
+        print_program(program)
+    else:
+        sys.stdout.buffer.write(program)
+        sys.stdout.buffer.flush()
+

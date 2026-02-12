@@ -9,6 +9,7 @@ from pathlib import Path
 
 from assembler import DEFAULT_INSTRUCTIONS_PATH, Category, assemble, load_op_info
 
+REPO_ROOT = Path(__file__).parent
 
 def test_instructions_csv():
     with DEFAULT_INSTRUCTIONS_PATH.open() as f:
@@ -127,20 +128,22 @@ def test_input_output():
 
 
 def test_end_to_end_assembler_to_emulator():
-    repo_root = Path(__file__).parent
     with tempfile.TemporaryDirectory() as d:
-        tmp = Path(d)
-        source = tmp / 'program.asm'
-        source.write_text(' SAA 5\n 65535\n')
-        binary = tmp / 'program.bin'
-
-        subprocess.run([sys.executable, 'assembler.py', str(source), '-o', str(binary)], cwd=repo_root, capture_output=True, text=True, check=True)
-        result = subprocess.run(['odin', 'run', 'emulator.odin', '-file', '--', str(binary)], cwd=repo_root, capture_output=True, text=True, check=True)
-
+        source_code = ' SAA 5\n 65535\n'
+        binary = Path(d) / 'program.bin'
+        subprocess.run([sys.executable, 'assembler.py', '--command', str(source_code), '-o', str(binary)], cwd=REPO_ROOT, capture_output=True, check=True)
+        result = subprocess.run(['odin', 'run', 'emulator.odin', '-file', '--', str(binary)], cwd=REPO_ROOT, capture_output=True, text=True, check=True)
     assert 'Executed 1 steps' in result.stdout
     states = re.findall(r'P:\s*(\d+),\s*A:\s*(\d+),\s*T:\s*(\d+),\s*X:\s*(\d+),\s*B:\s*(\d+)', result.stdout)
     assert states, result.stdout
     assert states[-1] == ('1', '5', '0', '0', '0')
+
+
+def test_assembler_accepts_inline_script_argument():
+    source_code = ' SAA 5\n 65535\n'
+    expected = assemble(source_code, load_op_info(DEFAULT_INSTRUCTIONS_PATH))
+    result = subprocess.run([sys.executable, 'assembler.py', '--command', source_code], cwd=REPO_ROOT, capture_output=True, check=True)
+    assert result.stdout == expected
 
 
 class TestNord10(unittest.TestCase):
@@ -152,6 +155,9 @@ class TestNord10(unittest.TestCase):
 
     def test_end_to_end_assembler_to_emulator(self):
         test_end_to_end_assembler_to_emulator()
+
+    def test_assembler_accepts_inline_script_argument(self):
+        test_assembler_accepts_inline_script_argument()
 
 
 if __name__ == '__main__':
