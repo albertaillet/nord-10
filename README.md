@@ -35,7 +35,10 @@ odin build emulator.odin -file
 
 ./assembler.py examples/arg_instructions.asm -o a.out && ./emulator a.out
 ```
-
+The tests for the emulator are written in Odin and can be run with
+```sh
+odin test .
+```
 
 ## References
 
