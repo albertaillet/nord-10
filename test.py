@@ -127,15 +127,18 @@ def test_input_output():
             assert out_as_int == expected, f"\n{out_as_int:0{l}b}\n!=\n{expected:0{l}b}\nfor '{source}'"
 
 
+def end_to_end_assembler_to_emulator(source_code: str) -> bytes:
+    assembler = subprocess.run([sys.executable, 'assembler.py', '--command', source_code], cwd=REPO_ROOT, capture_output=True, check=True)
+    result = subprocess.run(['odin', 'run', 'emulator.odin', '-file'], cwd=REPO_ROOT, input=assembler.stdout, capture_output=True, check=True)
+    return result.stdout
+
+
 def test_end_to_end_assembler_to_emulator():
-    with tempfile.TemporaryDirectory() as d:
-        source_code = ' SAA 5\n 65535\n'
-        binary = Path(d) / 'program.bin'
-        subprocess.run([sys.executable, 'assembler.py', '--command', str(source_code), '-o', str(binary)], cwd=REPO_ROOT, capture_output=True, check=True)
-        result = subprocess.run(['odin', 'run', 'emulator.odin', '-file', '--', str(binary)], cwd=REPO_ROOT, capture_output=True, text=True, check=True)
-    assert 'Executed 1 steps' in result.stdout
-    states = re.findall(r'P:\s*(\d+),\s*A:\s*(\d+),\s*T:\s*(\d+),\s*X:\s*(\d+),\s*B:\s*(\d+)', result.stdout)
-    assert states, result.stdout
+    source_code = ' SAA 5\n 65535\n'
+    result = end_to_end_assembler_to_emulator(source_code).decode()
+    assert 'Executed 1 steps' in result
+    states = re.findall(r'P:\s*(\d+),\s*A:\s*(\d+),\s*T:\s*(\d+),\s*X:\s*(\d+),\s*B:\s*(\d+)', result)
+    assert states, result
     assert states[-1] == ('1', '5', '0', '0', '0')
 
 
