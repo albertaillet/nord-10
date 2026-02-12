@@ -200,6 +200,21 @@ debug_memory :: proc(mem: []u16, start: int, end: int) {
     }
 }
 
+// Execute the CPU until it halts
+execute :: proc(cpu: ^CPU, mem: []u16, debug: bool = true) -> int {
+    steps := 0
+    for step(cpu, mem) {
+        if debug { fmt.printfln("\tinstr: 0o%06o/0b%016b", mem[cpu.P], mem[cpu.P]) }
+        cpu.P += 1
+        steps += 1
+        if debug { debug_cpu(cpu) }
+        // TODO: Remove these temporary safeguards once proper halting is implemented
+        if cpu.P > 15 { break }
+        if steps > 20 { break }
+    }
+    return steps
+}
+
 main :: proc() {
     memory_data : [MEMSIZE]u16
     memory := memory_data[:]  // convert to slice
@@ -214,15 +229,8 @@ main :: proc() {
     debug_cpu(&cpu)
     fmt.println("   <- Initial CPU state")
 
-    steps := 0
-    for step(&cpu, memory) {
-        fmt.printfln("\tinstr: 0o%06o/0b%016b", memory[cpu.P], memory[cpu.P])
-        cpu.P += 1
-        steps += 1
-        debug_cpu(&cpu)
-        if cpu.P > 15 { break }
-        if steps > 20 { break }
-    }
+    steps := execute(&cpu, memory, true)
+    fmt.println("Executed", steps, "steps")
 
     debug_cpu(&cpu)
     fmt.println("   <- End CPU state")
