@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 import csv
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
 from assembler import DEFAULT_INSTRUCTIONS_PATH, Category, assemble, load_op_info
 
@@ -120,7 +125,26 @@ def test_input_output():
             assert out_as_int == expected, f"\n{out_as_int:0{l}b}\n!=\n{expected:0{l}b}\nfor '{source}'"
 
 
+def test_end_to_end_assembler_to_emulator():
+    repo_root = Path(__file__).parent
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        source = tmp / 'program.asm'
+        source.write_text(' SAA 5\n 65535\n')
+        binary = tmp / 'program.bin'
+
+        subprocess.run([sys.executable, 'assembler.py', str(source), '-o', str(binary)], cwd=repo_root, capture_output=True, text=True, check=True)
+        result = subprocess.run(['odin', 'run', 'emulator.odin', '-file', '--', str(binary)], cwd=repo_root, capture_output=True, text=True, check=True)
+
+    assert 'Executed 1 steps' in result.stdout
+    states = re.findall(r'P:\s*(\d+),\s*A:\s*(\d+),\s*T:\s*(\d+),\s*X:\s*(\d+),\s*B:\s*(\d+)', result.stdout)
+    assert states, result.stdout
+    breakpoint()
+    assert states[-1] == ('1', '5', '0', '0', '0')
+
+
 if __name__ == '__main__':
     test_instructions_csv()
     test_input_output()
+    test_end_to_end_assembler_to_emulator()
     print('All tests passed!')
